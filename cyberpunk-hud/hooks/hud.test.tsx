@@ -7,7 +7,7 @@ const BAND = {
   props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 }, view: {} },
 } as const
 
-test('▾ minimizes the HUD to its badge and ▴ brings it back', async ($, on) => {
+test('HIDE minimizes the HUD to its strip and a press on the strip brings it back', async ($, on) => {
   mock.store(on)
   const ui = await $.ui.mount(BAND as never)
   expect(await ui.find({ key: 'hud-restore' })).toBeUndefined()

@@ -329,13 +329,63 @@ export function portraitBlock(x: number, y: number, w: number, h: number, art: P
   ].join('')
 }
 
+/** The HIDE chip at the HUD's top-right, in the HUD's 1080-wide units: where the rail stops for it. */
+export const HIDE_CHIP = { x: 966, y: 2, w: 96, h: 24 }
+
+/** A chip with a chevron and a word: the HUD's own buttons, drawn in its colours. */
+function chip(x: number, y: number, w: number, hgt: number, word: string, isUp: boolean): string {
+  const cx = x + 17
+  const cy = y + hgt / 2
+  const chev = isUp ? `M${cx - 6} ${cy + 3} L${cx} ${cy - 3} L${cx + 6} ${cy + 3}` : `M${cx - 6} ${cy - 3} L${cx} ${cy + 3} L${cx + 6} ${cy - 3}`
+  return [
+    `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" rx="5" fill="${C.amberDeep}" stroke="${C.amber}" stroke-width="1.6"/>`,
+    `<path d="${chev}" fill="none" stroke="${C.amber}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+    text(x + 31, cy + 5.5, word, { size: 15, fill: C.amber, weight: 700, ls: 2 }),
+  ].join('')
+}
+
+/** The HUD minimized: one slim strip with its name, three readings and a SHOW chip. */
+export const STRIP_W = 1080
+export const STRIP_H = 46
+export function renderStrip(h: Hud, o: { palette?: Palette }): string {
+  usePalette(o.palette ?? DEFAULT)
+  const W = STRIP_W
+  const H = STRIP_H
+  const cy = H / 2
+  const hex = [0, 1, 2, 3, 4, 5].map(i => `${(30 + 11 * Math.cos((Math.PI / 3) * i - Math.PI / 2)).toFixed(1)},${(cy + 11 * Math.sin((Math.PI / 3) * i - Math.PI / 2)).toFixed(1)}`).join(' ')
+  const pctOf = (kind: string) => h.limits.find(l => l.kind === kind)?.pct
+  const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '--' : `${Math.round(n)}%`)
+  const colourOf = (n: number | null | undefined) => (n !== null && n !== undefined && n >= 80 ? C.red : C.cyan)
+  const reading = (x: number, label: string, n: number | null | undefined) =>
+    text(x, cy + 5.5, label, { size: 15, fill: C.muted, ls: 1.5 }) + text(x + label.length * 11.5 + 14, cy + 6, fmt(n), { size: 17, fill: colourOf(n), weight: 700 })
+  const ctx = h.ctxPct
+  const five = pctOf('five_hour')
+  const week = pctOf('seven_day')
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">`,
+    `<defs>${sharedDefs()}</defs>`,
+    `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="10" fill="${C.bg}" stroke="${C.edge}" stroke-width="2"/>`,
+    `<line x1="18" y1="4" x2="${W - 18}" y2="4" stroke="${C.amber}" stroke-width="2" stroke-dasharray="16 11" opacity="0.8"/>`,
+    `<polygon points="${hex}" fill="none" stroke="${C.cyan}" stroke-width="2.2"/>`,
+    `<circle cx="30" cy="${cy}" r="3.4" fill="${C.pink}"/>`,
+    text(52, cy + 6, 'CYBERPUNK HUD', { size: 17, fill: C.amber, weight: 700, ls: 2.5 }),
+    `<line x1="252" y1="12" x2="252" y2="${H - 12}" stroke="${C.amberDim}" stroke-dasharray="2 4" opacity="0.7"/>`,
+    reading(276, 'CONTEXT', ctx),
+    reading(480, '5-HOUR', five),
+    reading(670, 'WEEKLY', week),
+    chip(W - 18 - 100, cy - 13, 100, 26, 'SHOW', true),
+    `</svg>`,
+  ].join('')
+}
+
 /** The whole HUD as one SVG document. */
-export function renderHud(h: Hud, o: { now: number; phaseNow?: number; isWorking: boolean; portrait: string; portraitW: number; portraitH: number; name: string; palette?: Palette }): string {
+export function renderHud(h: Hud, o: { now: number; phaseNow?: number; isWorking: boolean; portrait: string; portraitW: number; portraitH: number; name: string; palette?: Palette; hideChip?: boolean }): string {
   usePalette(o.palette ?? DEFAULT)
   const W = 1080
   const H = 236
   const { now, isWorking } = o
-  const dashes = `<line x1="18" y1="13" x2="1062" y2="13" stroke="${C.amber}" stroke-width="2.5" stroke-dasharray="16 11">${
+  const railEnd = o.hideChip ? HIDE_CHIP.x - 12 : 1062
+  const dashes = `<line x1="18" y1="13" x2="${railEnd}" y2="13" stroke="${C.amber}" stroke-width="2.5" stroke-dasharray="16 11">${
     isWorking ? '<animate attributeName="stroke-dashoffset" from="0" to="-54" dur="1.6s" repeatCount="indefinite"/>' : ''
   }</line>`
   const divider = (x: number) => `<line x1="${x}" y1="30" x2="${x}" y2="186" stroke="${C.amberDim}" stroke-width="1" stroke-dasharray="2 4" opacity="0.7"/>`
@@ -355,6 +405,7 @@ export function renderHud(h: Hud, o: { now: number; phaseNow?: number; isWorking
     agentsSection(h, now),
     `<line x1="18" y1="198" x2="1062" y2="198" stroke="${C.amberDim}" stroke-width="1" stroke-dasharray="3 5" opacity="0.7"/>`,
     footer(h, now, isWorking, o.name),
+    o.hideChip ? chip(HIDE_CHIP.x, HIDE_CHIP.y, HIDE_CHIP.w, HIDE_CHIP.h, 'HIDE', false) : '',
     `</svg>`,
   ].join('')
   return o.phaseNow === undefined ? svg : inPhase(svg, o.phaseNow)

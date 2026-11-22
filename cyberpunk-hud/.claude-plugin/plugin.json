@@ -1,6 +1,6 @@
 {
   "name": "cyberpunk-hud",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Retro Cyberpunk HUD above the prompt and a side panel on the right, both coloured to match your theme: portrait, theme card, context, plan limits, cost and active agents",
   "types": "./types/index.d.ts"
 }

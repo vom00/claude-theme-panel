@@ -2,9 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Agent, Hud, Look } from '../types'
-import { EMPTY, groupCategories, normalize, renderHud } from './core'
+import { EMPTY, groupCategories, HIDE_CHIP, normalize, renderHud, renderStrip, STRIP_H, STRIP_W } from './core'
 import { cardOf, paletteOf } from './palette'
-import type { Palette } from './palette'
 import { MINI_H, MINI_W, PANEL_H, PANEL_W, renderMini, renderPanel } from './panel'
 import { PORTRAIT, PORTRAIT_H, PORTRAIT_W } from './portrait'
 
@@ -18,6 +17,8 @@ const PANE = 'cyberpunk'
 const PANE_TITLE = 'Cyberpunk'
 /** About how wide one cell of the desktop pane's code font is, CSS pixels. */
 const CELL_PX = 7.6
+/** A blank that is not whitespace (U+2800): a label of them draws nothing and is kept. */
+const BLANK = '⠀'
 
 /** Live numbers, written on every event. The drawing never reads this one. */
 const hud = atom({ plugin: 'cyberpunk-hud', key: 'hud' } as const, EMPTY)
@@ -52,26 +53,6 @@ async function setMinimized($: EngineInterface, isMin: boolean) {
   await (isMin ? $.store.set(MIN_KEY, true) : $.store.delete(MIN_KEY)).catch(() => undefined)
 }
 
-/** The minimized HUD's badge: a neon chip with a hex mark and the name, in the theme's colours. */
-export const BADGE_W = 136
-export const BADGE_H = 22
-export function badgeSvg(p: Palette): string {
-  const hex = (cx: number, cy: number, r: number) =>
-    [0, 1, 2, 3, 4, 5].map(i => `${(cx + r * Math.cos((Math.PI / 3) * i - Math.PI / 2)).toFixed(2)},${(cy + r * Math.sin((Math.PI / 3) * i - Math.PI / 2)).toFixed(2)}`).join(' ')
-  return (
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${BADGE_W} ${BADGE_H}'>` +
-    `<defs><pattern id='sl' width='2' height='2' patternUnits='userSpaceOnUse'><rect width='2' height='1' fill='#ffffff' fill-opacity='.05'/></pattern>` +
-    `<filter id='gl' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='1.1'/><feMerge><feMergeNode/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs>` +
-    `<rect x='.5' y='.5' width='${BADGE_W - 1}' height='${BADGE_H - 1}' rx='4' fill='${p.bg}'/>` +
-    `<rect x='.5' y='.5' width='${BADGE_W - 1}' height='${BADGE_H - 1}' rx='4' fill='url(#sl)'/>` +
-    `<path d='M4 .5H.5V4M${BADGE_W - 4} ${BADGE_H - 0.5}H${BADGE_W - 0.5}V${BADGE_H - 4}' fill='none' stroke='${p.cyan}' stroke-width='1.4'/>` +
-    `<rect x='.5' y='.5' width='${BADGE_W - 1}' height='${BADGE_H - 1}' rx='4' fill='none' stroke='${p.pink}' stroke-opacity='.7'/>` +
-    `<g filter='url(#gl)'><polygon points='${hex(12, 11, 6.2)}' fill='none' stroke='${p.cyan}' stroke-width='1.4'/>` +
-    `<circle cx='12' cy='11' r='1.8' fill='${p.pink}'/></g>` +
-    `<text x='24' y='14.6' font-family='Consolas,Menlo,monospace' font-size='9.5' font-weight='700' letter-spacing='1.4' fill='${p.amber}' filter='url(#gl)'>CYBERPUNK HUD</text>` +
-    `</svg>`
-  )
-}
 
 const limitOf = (r: { kind: string; percentUsed: number; resetsAt?: string }) => {
   const at = r.resetsAt ? Date.parse(r.resetsAt) : NaN
@@ -357,16 +338,25 @@ export const register: Register = on => {
     // (never name a local `h`: JSX compiles to the global h())
     const { Box, Button, Svg } = $.ui.resolve(e)
     const palette = paletteOf(await read($, look))
+    // A see-through button laid over part of a picture: a blank label wide enough to fill the
+    // box, cut to its edge, so a press anywhere on that part lands on it.
+    const hit = (key: string, w: number, onPress: () => void) => (
+      <Box key={`${key}-hit`} position="absolute" top={0} right={0} width={w} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
+        <Button key={key} plain label={BLANK.repeat(Math.ceil(w / 4) + 20)} onPress={onPress} />
+      </Box>
+    )
+    const snap = await read($, view)
     if (await read($, isHidden)) {
-      // Minimized: the badge, and ▴ beside it to bring the HUD back.
+      // Minimized: one slim strip in the HUD's style, its readings and a SHOW chip; a press
+      // anywhere on it brings the HUD back.
+      const sh = Math.round((HUD_W * STRIP_H) / STRIP_W)
       return (
-        <Box flexDirection="row" alignItems="center" gap={1}>
-          <Svg source={badgeSvg(palette)} alt="Cyberpunk HUD, minimized" width={BADGE_W} height={BADGE_H} />
-          <Button key="hud-restore" label="▴" plain onPress={() => void setMinimized($, false)} />
+        <Box width={HUD_W} height={sh}>
+          <Svg source={renderStrip(normalize(snap.data), { palette })} alt="Cyberpunk HUD, minimized" width={HUD_W} height={sh} />
+          {hit('hud-restore', HUD_W, () => void setMinimized($, false))}
         </Box>
       )
     }
-    const snap = await read($, view)
     const source = renderHud(normalize(snap.data), {
       now: snap.now || Date.now(),
       // animations resume where they were instead of restarting on a redraw
@@ -377,14 +367,19 @@ export const register: Register = on => {
       portraitH: PORTRAIT_H,
       name: NAME,
       palette,
+      hideChip: true,
     })
-    // an interactive Svg draws in a frame: without a size it falls back to 300x150. ▾ sits over
-    // its top-right corner and minimizes it to the badge.
+    // an interactive Svg draws in a frame: without a size it falls back to 300x150. The HIDE chip
+    // is drawn in its top-right corner; a see-through button over that corner minimizes it.
+    const scale = HUD_W / 1080
+    const hh = Math.round(236 * scale)
+    const chipW = Math.ceil((1080 - HIDE_CHIP.x + 4) * scale)
+    const chipH = Math.ceil((HIDE_CHIP.y + HIDE_CHIP.h + 4) * scale)
     return (
-      <Box flexDirection="column">
-        <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={Math.round((HUD_W * 236) / 1080)} isInteractive />
-        <Box key="corner" position="absolute" top={0} right={0}>
-          <Button key="hud-minimize" label="▾" plain onPress={() => void setMinimized($, true)} />
+      <Box width={HUD_W} height={hh}>
+        <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={hh} isInteractive />
+        <Box key="corner" position="absolute" top={0} right={0} width={chipW} height={chipH} flexDirection="row" alignItems="stretch" overflow="hidden">
+          <Button key="hud-minimize" plain label={BLANK.repeat(Math.ceil(chipW / 4) + 20)} onPress={() => void setMinimized($, true)} />
         </Box>
       </Box>
     )
