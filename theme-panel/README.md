@@ -30,5 +30,5 @@ they will set their own theme when a session starts.
   (`hooks/rainy/LICENSE`).
 - The eight other scenes are from BackdropKit theme packs, kept here for personal use.
 
-In the desktop app a small 👒 button sits in the prompt footer, beside the model picker:
+In the desktop app a small 🌄 button sits in the prompt footer, beside the model picker:
 click it to open or close the panel. It sends nothing to the chat, so a running turn carries on.

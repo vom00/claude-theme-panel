@@ -6,7 +6,7 @@
 // The Cyberpunk HUD hears each $.theme.set and colours itself from the scene's name, so the
 // HUD changes with the theme.
 //
-// The little straw hat button (👒) in the desktop prompt footer opens or closes the panel without sending
+// The little sun-over-hills button (🌄) in the desktop prompt footer opens or closes the panel without sending
 // anything to the session. /theme-panel opens or closes the panel too; /theme-panel <name> switches to a theme by name.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, SessionContextUsage, SessionRateLimit, ThemeSetArgs, TurnUsage } from 'claude-code'
@@ -175,8 +175,8 @@ async function togglePanel($: EngineInterface) {
   await openPanel($)
 }
 
-/** The footer button's icon: a straw hat with a red band. */
-export const BUTTON_ICON = '\u{1F452}'
+/** The footer button's icon: a sun coming up over hills, as on a theme card. */
+export const BUTTON_ICON = '\u{1F304}'
 
 // A scene's motion counts from its --m: the seconds since a fixed moment are written in, so a
 // redrawn scene carries on where it was instead of starting over.
@@ -400,7 +400,7 @@ export const register: Register = on => {
     return result
   })
 
-  // The button in the desktop prompt footer, beside the model picker: a straw hat with a red band. The footer
+  // The button in the desktop prompt footer, beside the model picker: a sun over hills. The footer
   // draws a Button as its label alone (a picture under it, or its children, are left out), so the
   // icon is the label. A press opens or closes the panel in the mod itself, so nothing is sent to
   // the session and a turn that is running carries on. The footer's own mode labels follow it.

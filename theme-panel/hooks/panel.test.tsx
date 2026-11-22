@@ -218,11 +218,11 @@ test('the footer button opens and closes the panel without a command', async ($,
   await ui.unmount()
 })
 
-test('the footer button shows its straw hat icon', async ($, on) => {
+test('the footer button shows its sun-over-hills icon', async ($, on) => {
   engine(on)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
   const ui = await $.ui.mount({ plugin: 'theme-panel', component: 'SessionMode', surface: 'desktop', props: { modes: [] } })
-  expect(JSON.stringify(await ui.drawn())).toContain('\u{1F452}')
+  expect(JSON.stringify(await ui.drawn())).toContain('\u{1F304}')
   await ui.unmount()
 })
 
