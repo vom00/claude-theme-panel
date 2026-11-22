@@ -19,7 +19,7 @@ import { THEME as LOW_ORBIT } from './kit/low-orbit.js'
 import type { ThemeSetArgs } from 'claude-code'
 
 import type { Theme } from './kit/types'
-import { RAINY_ALT, RAINY_DAY_LOOK, RAINY_LOOK, RAINY_SCENE, rainySvg } from './rainy/look'
+import { RAINY_ALT, RAINY_DAY_LOOK, RAINY_LOOK, RAINY_SCENE, RAINY_SUNSET_LOOK, rainySunsetSvg, rainySvg } from './rainy/look'
 import { kitSlots, type Slot, SLOTS } from './slots'
 import { SUNFIELD_ALT, SUNFIELD_SCENE, sunfieldLookAt, sunfieldSvgAt } from './sunfield/look'
 
@@ -33,6 +33,8 @@ export type Entry = {
   kit?: Theme
   look?: ThemeSetArgs
   svg?: () => string
+  /** For a fixed-look theme drawn differently at some time of day: its scene then, else `svg`. */
+  svgFor?: (slot: Slot) => string | undefined
   /** For a theme that follows the clock by itself (Sunfield): its look and scene at a moment. */
   lookAt?: (ms: number, slot?: Slot) => ThemeSetArgs
   svgAt?: (ms: number, slot?: Slot) => string
@@ -54,9 +56,10 @@ export const CATALOG: readonly Entry[] = [
     slug: RAINY_SCENE,
     name: 'Rainy Window',
     look: RAINY_LOOK,
-    lookFor: slot => (slot === 'day' ? RAINY_DAY_LOOK : RAINY_LOOK),
-    slots: ['day', 'night'],
+    lookFor: slot => (slot === 'day' ? RAINY_DAY_LOOK : slot === 'sunset' ? RAINY_SUNSET_LOOK : RAINY_LOOK),
+    slots: SLOTS,
     svg: rainySvg,
+    svgFor: slot => (slot === 'sunset' ? rainySunsetSvg() : undefined),
     alt: RAINY_ALT,
   },
   kit(CLOUD_SEA),

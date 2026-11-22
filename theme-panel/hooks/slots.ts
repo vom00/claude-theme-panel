@@ -24,7 +24,12 @@ export function kitMoment(theme: Theme, slot: Slot): Moment | undefined {
   const ms = theme.moments
   const night = nightMoment(theme)
   if (slot === 'night') return night
-  const day = ms.find(m => m !== night && (m.id === 'day' || !m.dark))
+  // Its moment named day first, so an earlier light sunrise or morning is left for the sunset
+  // button; else its first light one; else (Tide Line, all dark) its sunrise, the scene by morning.
+  const day =
+    ms.find(m => m !== night && m.id === 'day') ??
+    ms.find(m => m !== night && !m.dark) ??
+    ms.find(m => m !== night && (m.id === 'sunrise' || m.id === 'morning'))
   if (slot === 'day') return day
   return WARM.map(id => ms.find(m => m.id === id)).find(m => m !== undefined && m !== night && m !== day)
 }

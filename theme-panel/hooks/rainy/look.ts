@@ -4,7 +4,7 @@
 import type { ThemeSetArgs } from 'claude-code'
 
 import { makeColors } from '../kit/make-colors.js'
-import { SCENE_ALT, sceneSvg } from './scene'
+import { SCENE_ALT, sceneSvg, sunsetSceneSvg } from './scene'
 
 export const RAINY_SCENE = 'rainy-window'
 export const RAINY_ALT = SCENE_ALT
@@ -53,3 +53,12 @@ export const rainySvg = (): string => (svg ??= sceneSvg())
 
 // By day: the light scheme, which the scene reads to draw the window in daylight, with the sun.
 export const RAINY_DAY_LOOK: ThemeSetArgs = { ...RAINY_LOOK, overrideColorScheme: 'light' }
+
+// At sunset: the dark scheme for the app, over the scene drawn in its fixed sunset palette
+// (rainySunsetSvg), the glass tinted a warm dusk.
+export const RAINY_SUNSET_LOOK: ThemeSetArgs = {
+  ...RAINY_LOOK,
+  backdrop: { scene: RAINY_SCENE, glass: { blur: 18, tint: '#2A1A33', opacity: 0.62 } },
+}
+let sunset: string | undefined
+export const rainySunsetSvg = (): string => (sunset ??= sunsetSceneSvg())

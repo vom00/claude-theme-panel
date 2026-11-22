@@ -235,24 +235,27 @@ const RESYNC_MS = 5 * 60 * 1000
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-/** A card's picture: the scene, rounded, with a ring and an ON tag on the theme that is on. */
 /** About how big the desktop pane draws one time-of-day button, CSS pixels. */
 const TIME_BUTTON_W = 38
 const TIME_BUTTON_H = 30
 
 /**
- * A card's picture. `buttons` time-of-day buttons sit in its top-right corner over a card drawn
- * `w` pixels wide: a dark tab is drawn behind them, so they stand out on a bright sky.
+ * A card's picture: the scene, rounded, with a ring and an ON tag on the theme that is on.
+ * `buttons` time-of-day buttons sit in its top-right corner over a card drawn `w` pixels wide:
+ * the corner is shaded behind them, a soft shadow with no edge to line up, so they stand out
+ * on a bright sky.
  */
 export function cardSvg(entry: Entry, isOn: boolean, buttons = 0, w = 0): string {
   let body = THUMBS[entry.slug] ?? entry.thumb ?? `<rect width='${THUMB_W}' height='${THUMB_H}' fill='#2a2f45'/>`
+  let defs = ''
   if (buttons > 0 && w > 0) {
     const k = THUMB_W / w
-    const tw = (buttons * TIME_BUTTON_W + 10) * k
-    const th = (TIME_BUTTON_H + 4) * k
-    const r = 8 * k
-    // Rounded at its lower left; its other corners run past the card's edge and are cut by it.
-    body += `<rect x='${(THUMB_W - tw).toFixed(1)}' y='${(-r).toFixed(1)}' width='${(tw + r).toFixed(1)}' height='${(th + r).toFixed(1)}' rx='${r.toFixed(1)}' fill='#0b0d1a' fill-opacity='0.78' shape-rendering='geometricPrecision'/>`
+    const rx = (buttons * TIME_BUTTON_W * 1.5 + 30) * k
+    const ry = (TIME_BUTTON_H * 2 + 12) * k
+    defs =
+      `<radialGradient id='shade${buttons}'><stop offset='0' stop-color='#070914' stop-opacity='0.82'/>` +
+      `<stop offset='0.6' stop-color='#070914' stop-opacity='0.6'/><stop offset='1' stop-color='#070914' stop-opacity='0'/></radialGradient>`
+    body += `<ellipse cx='${THUMB_W}' cy='0' rx='${rx.toFixed(1)}' ry='${ry.toFixed(1)}' fill='url(#shade${buttons})' shape-rendering='geometricPrecision'/>`
   }
   const ring = isOn
     ? `<rect x='1' y='1' width='${THUMB_W - 2}' height='${THUMB_H - 2}' rx='7' fill='none' stroke='#ffffff' stroke-width='2' shape-rendering='geometricPrecision'/>` +
@@ -262,7 +265,7 @@ export function cardSvg(entry: Entry, isOn: boolean, buttons = 0, w = 0): string
   return (
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${THUMB_W} ${THUMB_H}' width='100%' height='100%' preserveAspectRatio='xMidYMid slice'>` +
     `<title>${esc(entry.name)}</title>` +
-    `<defs><clipPath id='r'><rect width='${THUMB_W}' height='${THUMB_H}' rx='8'/></clipPath></defs>` +
+    `<defs><clipPath id='r'><rect width='${THUMB_W}' height='${THUMB_H}' rx='8'/></clipPath>${defs}</defs>` +
     `<g clip-path='url(#r)' shape-rendering='crispEdges'>${body}</g>${ring}</svg>`
   )
 }
@@ -389,7 +392,9 @@ export const register: Register = on => {
     if (!entry.kit) {
       if (entry.svgAt) return <Svg source={entry.svgAt(now(), slotOf(entry))} alt={entry.alt ?? entry.name} isInteractive />
       if (!entry.svg) return next(e)
-      return entry.isInteractive ? <Svg source={entry.svg()} alt={entry.alt ?? entry.name} isInteractive /> : <Svg source={entry.svg()} alt={entry.alt ?? entry.name} />
+      const slot = slotOf(entry)
+      const source = (slot && entry.svgFor?.(slot)) || entry.svg()
+      return entry.isInteractive ? <Svg source={source} alt={entry.alt ?? entry.name} isInteractive /> : <Svg source={source} alt={entry.alt ?? entry.name} />
     }
     const m = shown ?? momentOf({ ...entry, kit: entry.kit })
     return <Svg source={sceneAt(sceneOf(entry.kit, m), now())} alt={altOf(entry.kit, m)} isInteractive />

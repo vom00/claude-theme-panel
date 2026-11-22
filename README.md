@@ -21,7 +21,7 @@ You can also use the command:
 
 - `/theme-panel` opens the panel, `/theme-panel off` closes it.
 - `/theme-panel moon keep` switches to a theme by name.
-- `/theme-panel harbor day` (or `sunset`, `night`) puts a theme on at that time of day. The ☀️ 🌇 🌙 buttons in the top-right corner of each card do the same, and each theme keeps the time you last picked. Deep Reef, Moon Keep and Low Orbit have a single look, so they have no buttons; a few themes have only two of the three.
+- `/theme-panel harbor day` (or `sunset`, `night`) puts a theme on at that time of day. The ☀️ 🌇 🌙 buttons in the top-right corner of each card do the same, and each theme keeps the time you last picked. Deep Reef, Moon Keep and Low Orbit have a single look, so they have no buttons. Where a scene has no sunset of its own, the sunset button shows its warmest light (sunrise, evening or morning); Rainy Window gets a sunset palette made for it.
 - `/theme-panel blur off` turns off the frosted blur behind messages, and `/theme-panel blur on` brings it back. The **Blur** switch at the bottom of the panel does the same.
 
 On Gas Station, the price board in the scene shows this chat's token count, context use and weekly limit.

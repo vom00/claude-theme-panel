@@ -109,6 +109,26 @@ const PALETTE = Object.keys(LIGHT)
   // The sun shows by day, the moon and stars by night.
   .concat([`--daySun:${themed('#F2A35E', '#F2A35E', `calc(1 - ${NIGHT})`)}`, `--moon:${themed('#F3ECD8', '#F3ECD8', NIGHT)}`, `--star:${themed('#E9E1CE', '#E9E1CE', NIGHT)}`])
   .join(';')
+
+// Sunset, added by the theme panel: one fixed palette whatever the app's mode. The room sits
+// between its day and night colours, warmed as if lit by the last of the sun; the window shows a
+// violet-to-orange sky, the hills dark against it and the sun low and orange.
+const toRgb = (h: string) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16))
+const toHex = (n: number[]) => '#' + n.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')
+function dusk(light: string, dark: string): string {
+  const a = toRgb(light)
+  const b = toRgb(dark)
+  const m = a.map((v, i) => v + ((b[i] ?? v) - v) * 0.6)
+  return toHex([(m[0] ?? 0) * 1.12 + 12, (m[1] ?? 0) * 0.9 + 2, (m[2] ?? 0) * 0.76])
+}
+const SUNSET: Record<string, string> = {
+  winTop: '#4B3A8A', winBot: '#F6A266', sky: '#E58A7A', hill: '#8C4A74', hill2: '#66345F', tree: '#3A2148',
+  sun: '#FFC27A', rain: '#F2B7AE', glass: '#FFE1CC', warm: '#F7A658', lamp: '#F6B25E', bulb: '#FFC774', flame: '#FFB25E',
+}
+const SUNSET_PALETTE = Object.keys(LIGHT)
+  .map(k => `--${k}:${SUNSET[k] ?? dusk(LIGHT[k] as string, DARK[k] as string)}`)
+  .concat(['--daySun:#FF9450', '--moon:#00000000', '--star:#FFE4CE40'])
+  .join(';')
 const PAINT = [
   'tex', 'shade', 'sky', 'hill', 'hill2', 'tree', 'sun', 'daySun', 'moon', 'star', 'rain', 'glass', 'frame', 'curtain', 'curtainDark', 'tie',
   'leaf', 'leaf2', 'pot', 'mat', 'print', 'deskTop', 'deskDot', 'deskFront', 'deskLine', 'drawer', 'lamp', 'lampOff', 'metal', 'bulb', 'box', 'vinyl',
@@ -619,6 +639,11 @@ export function sceneSvg(): string {
   o += corner()
   SCENE = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><style>${BASE_STYLE}</style>${defs()}${o}</svg>`
   return SCENE
+}
+
+/** The same scene at sunset: its palette swapped for the fixed sunset one. */
+export function sunsetSceneSvg(): string {
+  return sceneSvg().replace(`svg{${PALETTE}}`, `svg{${SUNSET_PALETTE}}`)
 }
 
 export const SCENE_ALT = 'Clawd typing on a laptop at his desk in a cozy room, rain at the window, a record playing'

@@ -2,6 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { TestBody } from 'claude-code/testing'
 import type { ThemeSetArgs } from 'claude-code'
 
+import { CATALOG } from './catalog'
 import { PAGE_BUDGET, PAGES, pictureSize } from './register'
 
 const PANE = {
@@ -131,12 +132,40 @@ test("a card's day, sunset and night buttons put that theme on at that time", as
   const sunset = tint(sets.at(-1))
   await ui.press({ key: 'time-cloud-sea-night' })
   expect(tint(sets.at(-1))).not.toBe(sunset)
-  // Rainy Window has day and night; Deep Reef, one look, has no buttons.
+  // Rainy Window: day is the light scheme; sunset its own palette under a dusk glass.
   await ui.press({ key: 'time-rainy-window-day' })
   expect(sets.at(-1)?.overrideColorScheme).toBe('light')
-  expect(await ui.find({ key: 'time-rainy-window-sunset' })).toBeUndefined()
+  await ui.press({ key: 'time-rainy-window-sunset' })
+  expect(sets.at(-1)?.overrideColorScheme).toBe('dark')
+  expect(tint(sets.at(-1))).toBe('#2A1A33')
+  // Deep Reef, one look, has no buttons.
   expect(await ui.find({ key: 'times-deep-reef' })).toBeUndefined()
   await ui.unmount()
+})
+
+test("Rainy Window's sunset draws its own scene", async ($, on) => {
+  const sets = engine(on)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const backdrop = async () => {
+    const ui = await $.ui.mount({ plugin: 'theme-panel', component: 'Backdrop', surface: 'desktop', props: { plugin: 'theme-panel', scene: 'rainy-window', glass: false } } as never)
+    const source = String((await ui.find({ type: 'Svg' }))?.props.source)
+    await ui.unmount()
+    return source
+  }
+  const night = await backdrop()
+  await $.command.run({ command: 'theme-panel', args: 'rainy window sunset' } as Parameters<typeof $.command.run>[0])
+  expect(sets.at(-1)?.backdrop?.scene).toBe('rainy-window')
+  const sunset = await backdrop()
+  expect(sunset).not.toBe(night)
+  expect(sunset).toContain('--winBot:#F6A266')
+})
+
+test('each theme offers the times its scene has', () => {
+  const offered = Object.fromEntries(CATALOG.map(c => [c.slug, (c.slots ?? []).join(' ')]))
+  for (const c of CATALOG) {
+    if (['deep-reef', 'moon-keep', 'low-orbit'].includes(c.slug)) expect(offered[c.slug]).toBe('')
+    else expect(`${c.slug}: ${offered[c.slug]}`).toBe(`${c.slug}: day sunset night`)
+  }
 })
 
 test('a picked time comes back in a new session, and /theme-panel <name> <time> picks one', async ($, on) => {
