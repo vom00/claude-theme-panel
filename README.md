@@ -1,4 +1,4 @@
-# Theme panel and Flightdeck HUD
+# Theme panel and HUD
 
 Two mods for Claude Code. The Theme panel puts a column of theme cards on the right side of the chat, and clicking a card switches the background scene and colours. The Flightdeck HUD sits above the prompt and shows how full the context is, your plan limits, the cost so far and any agents that are running. When you change theme, the HUD picks up the new colours.
 
@@ -24,7 +24,7 @@ You can also use the command:
 
 On Gas Station, the price board in the scene shows this chat's token count, context use and weekly limit.
 
-## Flightdeck HUD
+## HUD
 
 A purple, scanlined readout above the prompt with a portrait, the theme card, the context bar, the 5-hour and weekly limits with their reset times, the session cost and the active agents. It reads the scene name from each theme change, so it matches whichever theme the panel has on.
 
