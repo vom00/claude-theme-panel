@@ -9,8 +9,8 @@
       "description": "Theme cards on the right: click one to switch theme. 16 themes, each on its night look."
     },
     {
-      "name": "flightdeck-hud",
-      "source": "./flightdeck-hud",
+      "name": "cyberpunk-hud",
+      "source": "./cyberpunk-hud",
       "description": "Retro HUD above the prompt that shows context, plan limits, cost and running agents, coloured to match the theme."
     }
   ]

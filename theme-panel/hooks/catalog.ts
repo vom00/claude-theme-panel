@@ -1,7 +1,7 @@
 // The themes the panel offers, in the order its cards show them. Each BackdropKit theme is
 // its theme.js from ~/.claude/backdropkit, scenes as they ship; Rainy Window
 // is the rainy-window plugin's scene, and Sunfield its own one-scene theme (sunfield/). A theme's slug is also its scene's name, which is how the
-// Flightdeck HUD knows which theme is on and takes its colours.
+// Cyberpunk HUD knows which theme is on and takes its colours.
 import { THEME as CLOUD_SEA } from './kit/cloud-sea.js'
 import { THEME as DEEP_REEF } from './kit/deep-reef.js'
 import { THEME as GAS_STATION } from './kit/gas-station.js'

@@ -1,5 +1,5 @@
 /**
- * Flightdeck colours. The HUD and the side panel take their colours from the theme the app is
+ * Cyberpunk colours. The HUD and the side panel take their colours from the theme the app is
  * showing: each known theme has three accent colours picked from its art and a dark ground in
  * its hue; the moment of the day (Day, Sunset, Night) tints the ground a little and gives the
  * theme card its colour strip. With no theme, or one this file doesn't know, the HUD keeps its
@@ -28,7 +28,7 @@ export type Palette = {
   duo?: readonly [string, string]
 }
 
-/** The original Flightdeck colours, used with no theme. */
+/** The original Cyberpunk colours, used with no theme. */
 export const DEFAULT: Palette = {
   bg: '#0a0c14',
   edge: '#1b1f2e',

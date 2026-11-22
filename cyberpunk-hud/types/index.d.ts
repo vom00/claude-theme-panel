@@ -50,6 +50,6 @@ export type Look = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'flightdeck-hud': { hud: Hud; view: { data: Hud; now: number }; isHidden: boolean; look: Look; isWorking: boolean }
+    'cyberpunk-hud': { hud: Hud; view: { data: Hud; now: number }; isHidden: boolean; look: Look; isWorking: boolean }
   }
 }

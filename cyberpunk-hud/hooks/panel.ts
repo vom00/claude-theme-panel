@@ -1,5 +1,5 @@
 /**
- * Flightdeck side panel: the HUD stood on end for the pane docked right of the chat. The same
+ * Cyberpunk side panel: the HUD stood on end for the pane docked right of the chat. The same
  * sections as the band (context, plan limits, agents, the session's stats), with a theme card
  * on top showing the theme the app is on, its moment of the day and its colours.
  */

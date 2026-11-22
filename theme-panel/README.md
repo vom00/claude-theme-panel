@@ -12,7 +12,7 @@ The BackdropKit themes show their scenes as they ship, whole,
 and every theme stays on its night look whatever the time. Gas Station's
 price board still shows this chat's tokens, context and weekly limit.
 
-The Flightdeck HUD (if installed) recolours itself to match whichever theme the panel puts on;
+The Cyberpunk HUD (if installed) recolours itself to match whichever theme the panel puts on;
 under Rainy Window it keeps its original neon colours.
 
 ## Commands

@@ -3,7 +3,7 @@
 // is kept for new sessions. The panel carries every theme itself (fifteen BackdropKit themes as
 // they ship, and Rainy Window), so one mod sets and draws whichever is on.
 //
-// The Flightdeck HUD hears each $.theme.set and colours itself from the scene's name, so the
+// The Cyberpunk HUD hears each $.theme.set and colours itself from the scene's name, so the
 // HUD changes with the theme.
 //
 // The little sun-over-hills button (🌄) in the desktop prompt footer opens or closes the panel without sending

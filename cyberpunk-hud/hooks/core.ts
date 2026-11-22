@@ -1,5 +1,5 @@
 /**
- * Flightdeck HUD: pure drawing. Takes the session's numbers and returns one SVG
+ * Cyberpunk HUD: pure drawing. Takes the session's numbers and returns one SVG
  * document, the retro HUD drawn above the prompt.
  */
 

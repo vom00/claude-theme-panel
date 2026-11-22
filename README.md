@@ -1,12 +1,12 @@
 # Theme panel and HUD
 
-Two mods for Claude Code. The Theme panel puts a column of theme cards on the right side of the chat, and clicking a card switches the background scene and colours. The Flightdeck HUD sits above the prompt and shows how full the context is, your plan limits, the cost so far and any agents that are running. When you change theme, the HUD picks up the new colours.
+Two mods for Claude Code. The Theme panel puts a column of theme cards on the right side of the chat, and clicking a card switches the background scene and colours. The Cyberpunk HUD sits above the prompt and shows how full the context is, your plan limits, the cost so far and any agents that are running. When you change theme, the HUD picks up the new colours.
 
 ## Install
 
 ```
 /plugin install theme-panel --marketplace vom00/claude-theme-panel
-/plugin install flightdeck-hud --marketplace vom00/claude-theme-panel
+/plugin install cyberpunk-hud --marketplace vom00/claude-theme-panel
 ```
 
 Then run `/reload-plugins` or start a new session.
@@ -34,4 +34,4 @@ Fifteen of the sixteen scenes are from [BackdropKit](https://winchxyz.github.io/
 
 Rainy Window's scene is from the rainy-window plugin by Ishu Agrawal (https://github.com/ishuagrawal/claude-code-themes), under the MIT licence in `theme-panel/hooks/rainy/LICENSE`.
 
-The Flightdeck HUD's console above the prompt, with its portrait, gauges and plan limits, takes its idea from [Interlinked](https://github.com/codedcasanova/interlinked-theme) by codedcasanova, a retro-future noir theme for the Claude desktop app (MIT).
+The Cyberpunk HUD's console above the prompt, with its portrait, gauges and plan limits, takes its idea from [Interlinked](https://github.com/codedcasanova/interlinked-theme) by codedcasanova, a retro-future noir theme for the Claude desktop app (MIT).

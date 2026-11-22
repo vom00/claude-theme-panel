@@ -13,19 +13,19 @@ const HUD_W = 760
 /** Changes arriving within this window are drawn together, as one redraw. */
 const BATCH_MS = 1500
 /** The side panel's pane id and tab title. */
-const PANE = 'flightdeck'
-const PANE_TITLE = 'Flightdeck'
+const PANE = 'cyberpunk'
+const PANE_TITLE = 'Cyberpunk'
 /** About how wide one cell of the desktop pane's code font is, CSS pixels. */
 const CELL_PX = 7.6
 
 /** Live numbers, written on every event. The drawing never reads this one. */
-const hud = atom({ plugin: 'flightdeck-hud', key: 'hud' } as const, EMPTY)
+const hud = atom({ plugin: 'cyberpunk-hud', key: 'hud' } as const, EMPTY)
 /** What the drawing reads: a snapshot of `hud`, published only when something visible changed. */
-const view = atom({ plugin: 'flightdeck-hud', key: 'view' } as const, { data: EMPTY, now: 0 })
-const isHidden = atom({ plugin: 'flightdeck-hud', key: 'isHidden' } as const, false)
+const view = atom({ plugin: 'cyberpunk-hud', key: 'view' } as const, { data: EMPTY, now: 0 })
+const isHidden = atom({ plugin: 'cyberpunk-hud', key: 'isHidden' } as const, false)
 /** The theme the app is on, which colours the band and the panel. */
-const isWorking = atom({ plugin: 'flightdeck-hud', key: 'isWorking' } as const, false)
-const look = atom({ plugin: 'flightdeck-hud', key: 'look' } as const, null as Look)
+const isWorking = atom({ plugin: 'cyberpunk-hud', key: 'isWorking' } as const, false)
+const look = atom({ plugin: 'cyberpunk-hud', key: 'look' } as const, null as Look)
 
 const LOOK_KEY = 'look'
 const PANEL_OFF_KEY = 'panelOff'
@@ -104,12 +104,12 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'hud',
-      description: 'Flightdeck HUD above the prompt: show or hide it',
+      description: 'Cyberpunk HUD above the prompt: show or hide it',
       argumentHint: '[on|off]',
     })
     await $.command.register({
       name: 'hud-panel',
-      description: 'Flightdeck side panel on the right: show or hide it',
+      description: 'Cyberpunk side panel on the right: show or hide it',
       argumentHint: '[on|off]',
     })
     // the theme seen last time, until this session's theme is set
@@ -152,7 +152,7 @@ export const register: Register = on => {
     const verb = e.args.trim().toLowerCase()
     const hide = verb === 'off' ? true : verb === 'on' ? false : !(await read($, isHidden))
     await update($, isHidden, () => hide)
-    return { text: hide ? 'Flightdeck HUD hidden. /hud on brings it back.' : 'Flightdeck HUD on.' }
+    return { text: hide ? 'Cyberpunk HUD hidden. /hud on brings it back.' : 'Cyberpunk HUD on.' }
   })
 
   on('command.run', { command: 'hud-panel' }, async ($, e) => {
@@ -162,11 +162,11 @@ export const register: Register = on => {
     if (!show) {
       await $.store.set(PANEL_OFF_KEY, true).catch(() => undefined)
       if (isOpen) await $.ui.close({ id: PANE })
-      return { text: 'Flightdeck panel closed, in new sessions too. /hud-panel on brings it back.' }
+      return { text: 'Cyberpunk panel closed, in new sessions too. /hud-panel on brings it back.' }
     }
     await $.store.delete(PANEL_OFF_KEY).catch(() => undefined)
     const r = await openPanel($)
-    return { text: r.isPlaced ? 'Flightdeck panel open on the right.' : `Flightdeck panel is open but not shown here: ${r.reason}` }
+    return { text: r.isPlaced ? 'Cyberpunk panel open on the right.' : `Cyberpunk panel is open but not shown here: ${r.reason}` }
   })
 
   // Closing the panel by hand keeps it closed in new sessions, until /hud-panel on.
@@ -233,12 +233,12 @@ export const register: Register = on => {
     const cols = e.props.bodyColumns || e.viewport?.columns || 48
     const wPx = Math.round(Math.max(240, Math.min(620, cols * CELL_PX)))
     if (e.props.placement !== 'dock') {
-      return <Svg source={renderMini(data, opts)} alt={`Flightdeck: ${opts.card.name} theme, context and 5-hour limit`} width={wPx} height={Math.round((wPx * MINI_H) / MINI_W)} isInteractive />
+      return <Svg source={renderMini(data, opts)} alt={`Cyberpunk: ${opts.card.name} theme, context and 5-hour limit`} width={wPx} height={Math.round((wPx * MINI_H) / MINI_W)} isInteractive />
     }
     return (
       <Svg
         source={renderPanel(data, opts)}
-        alt={`Flightdeck panel: ${opts.card.name} theme (${opts.card.moment}), context, plan limits, agents and session stats`}
+        alt={`Cyberpunk panel: ${opts.card.name} theme (${opts.card.moment}), context, plan limits, agents and session stats`}
         width={wPx}
         height={Math.round((wPx * PANEL_H) / PANEL_W)}
         isInteractive
@@ -339,6 +339,6 @@ export const register: Register = on => {
       palette: paletteOf(await read($, look)),
     })
     // an interactive Svg draws in a frame: without a size it falls back to 300x150
-    return <Svg source={source} alt="Flightdeck HUD: context, plan limits, cost and active agents" width={HUD_W} height={Math.round((HUD_W * 236) / 1080)} isInteractive />
+    return <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={Math.round((HUD_W * 236) / 1080)} isInteractive />
   })
 }
