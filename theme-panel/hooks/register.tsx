@@ -31,11 +31,16 @@ const BLANK = '⠀'
 
 const CURRENT_KEY = 'current'
 const PANEL_OFF_KEY = 'panelOff'
+const BLUR_OFF_KEY = 'blurOff'
 
 /** The theme on now, by slug ('' before the first is set). */
 const current = atom({ plugin: 'theme-panel', key: 'current' } as const, '')
 /** Which page of cards the panel shows. */
 const page = atom({ plugin: 'theme-panel', key: 'page' } as const, 0)
+/** Whether the frosted blur behind the app's panels and messages is on. */
+const blurOn = atom({ plugin: 'theme-panel', key: 'blurOn' } as const, true)
+// The same, for the places that set a look outside a drawing.
+let isBlurOn = true
 
 // The cards go four to a page. The desktop app draws nothing of a pane whose drawing runs too
 // large: all nine pictures at once (342 KB) drew nothing, four (129 KB) drew. thumbs.ts keeps
@@ -90,12 +95,29 @@ function lookOf(entry: Entry): ThemeSetArgs {
   }
 }
 
+/** A look with its glass unblurred when the blur is off (its tint and opacity kept). */
+export function withBlur(look: ThemeSetArgs, isOn: boolean): ThemeSetArgs {
+  const glass = look.backdrop?.glass
+  if (isOn || !look.backdrop || !glass) return look
+  return { ...look, backdrop: { ...look.backdrop, glass: { ...glass, blur: 0 } } }
+}
+const setLook = ($: EngineInterface, look: ThemeSetArgs) => $.theme.set(withBlur(look, isBlurOn))
+
+/** The blur switch: on or off, now and in new sessions, with the theme on set again. */
+async function setBlur($: EngineInterface, isOn: boolean) {
+  isBlurOn = isOn
+  await update($, blurOn, () => isOn)
+  await (isOn ? $.store.delete(BLUR_OFF_KEY) : $.store.set(BLUR_OFF_KEY, true)).catch(() => undefined)
+  const entry = entryOf(onSlug)
+  if (entry) await setLook($, lookOf(entry))
+}
+
 /** Puts a theme on and records it as the one on. */
 async function apply($: EngineInterface, slug: string) {
   const entry = entryOf(slug) ?? entryOf(DEFAULT_SLUG) ?? CATALOG[0]!
   onSlug = entry.slug
   await update($, current, () => entry.slug)
-  return $.theme.set(lookOf(entry))
+  return setLook($, lookOf(entry))
 }
 
 /** A press on a card: that theme, now and in new sessions. */
@@ -230,6 +252,8 @@ export const register: Register = on => {
     } catch {
       // No reading yet.
     }
+    isBlurOn = (await $.store.get(BLUR_OFF_KEY).catch(() => undefined)) !== true
+    await update($, blurOn, () => isBlurOn)
     const kept = await $.store.get(CURRENT_KEY).catch(() => undefined)
     await apply($, typeof kept === 'string' ? kept : DEFAULT_SLUG)
     $.clock.every(RESYNC_MS, () => {
@@ -249,10 +273,10 @@ export const register: Register = on => {
             const before = clockLookKey
             const look = lookOf(entry)
             if (clockLookKey === before) return $.ui.invalidate('ui.render')
-            return $.theme.set(look).then(() => $.ui.invalidate('ui.render'))
+            return setLook($, look).then(() => $.ui.invalidate('ui.render'))
           }
           if (!entry?.kit || momentAt(entry.kit, now()) === shown) return undefined
-          return $.theme.set(lookOf(entry)).then(() => $.ui.invalidate('ui.render'))
+          return setLook($, lookOf(entry)).then(() => $.ui.invalidate('ui.render'))
         })
         .catch(() => undefined)
     })
@@ -272,6 +296,10 @@ export const register: Register = on => {
       await $.store.delete(PANEL_OFF_KEY).catch(() => undefined)
       const r = await openPanel($)
       return { text: r.isPlaced ? 'Theme panel open on the right.' : `Theme panel is open but not shown here: ${r.reason}` }
+    }
+    if (verb === 'blur on' || verb === 'blur off') {
+      await setBlur($, verb === 'blur on')
+      return { text: `Blur behind messages ${verb === 'blur on' ? 'on' : 'off'}.` }
     }
     const entry = findEntry(arg)
     if (!entry) return { text: `No theme "${arg}". Themes: ${CATALOG.map(c => c.name).join(', ')}.` }
@@ -341,12 +369,16 @@ export const register: Register = on => {
   // picture with the theme's name under it. A press anywhere on a card puts that theme on.
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const onNow = await read($, current)
+    const isBlur = await read($, blurOn)
+    const blurLabel = isBlur ? '◉ Blur on' : '○ Blur off'
+    const toggleBlur = () => void setBlur($, !isBlur).catch(() => undefined)
     const total = CATALOG.length
     if (e.surface === 'terminal') {
       const { Box, Text, Button } = $.ui.resolve(e)
       return (
         <Box flexDirection="column">
           <Text dimColor>{`${total} themes`}</Text>
+          <Button key="toggle-blur" plain onPress={toggleBlur}>{blurLabel}</Button>
           {CATALOG.map(c => (
             <Button key={`pick-${c.slug}`} plain onPress={() => void pick($, c.slug)}>
               {c.slug === onNow ? `● ${c.name}` : `  ${c.name}`}
@@ -365,7 +397,10 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column" gap={1}>
         <Box key="head" flexDirection="row" justifyContent="space-between" alignItems="center">
-          <Text dimColor>{`${total} themes`}</Text>
+          <Box key="left" flexDirection="row" alignItems="center" gap={2}>
+            <Text dimColor>{`${total} themes`}</Text>
+            <Button key="toggle-blur" label={blurLabel} dimColor={!isBlur} onPress={toggleBlur} />
+          </Box>
           {pages > 1 && (
             <Box key="arrows" flexDirection="row" gap={1}>
               <Button key="up" label="▲" dimColor={p === 0} onPress={() => turn(-1)} />

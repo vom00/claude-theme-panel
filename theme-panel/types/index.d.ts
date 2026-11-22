@@ -5,6 +5,8 @@ declare module 'claude-code' {
       current: string
       /** Which page of theme cards the panel shows. */
       page: number
+      /** Whether the frosted blur behind the app's panels and messages is on. */
+      blurOn: boolean
     }
   }
 }

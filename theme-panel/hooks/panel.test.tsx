@@ -85,6 +85,37 @@ test('/theme-panel <name> switches by name', async ($, on) => {
   expect(JSON.stringify(r)).toContain('Lavender Slope is on')
 })
 
+const blurOf = (look: ThemeSetArgs | undefined) => {
+  const glass = look?.backdrop?.glass
+  return glass === false || glass === undefined ? undefined : glass.blur
+}
+
+test('the blur switch in the panel takes the blur off and puts it back', async ($, on) => {
+  const sets = engine(on)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  expect(blurOf(sets.at(-1))).toBeGreaterThan(0)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'toggle-blur' })
+  expect(blurOf(sets.at(-1))).toBe(0)
+  expect((await ui.find({ key: 'toggle-blur' }))?.props.label).toBe('○ Blur off')
+  // A theme picked while it is off stays unblurred.
+  await ui.press({ key: 'pick-deep-reef' })
+  expect(sets.at(-1)?.backdrop?.scene).toBe('deep-reef')
+  expect(blurOf(sets.at(-1))).toBe(0)
+  await ui.press({ key: 'toggle-blur' })
+  expect(blurOf(sets.at(-1))).toBeGreaterThan(0)
+  await ui.unmount()
+})
+
+test('blur kept off comes back off in a new session, and /theme-panel blur on turns it on', async ($, on) => {
+  const sets = engine(on, { blurOff: true })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  expect(blurOf(sets.at(-1))).toBe(0)
+  const r = await $.command.run({ command: 'theme-panel', args: 'blur on' } as Parameters<typeof $.command.run>[0])
+  expect(JSON.stringify(r)).toContain('Blur behind messages on')
+  expect(blurOf(sets.at(-1))).toBeGreaterThan(0)
+})
+
 test('on desktop the whole card takes the press, over the picture', async ($, on) => {
   const sets = engine(on)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
