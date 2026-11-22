@@ -21,7 +21,7 @@ You can also use the command:
 
 - `/theme-panel` opens the panel, `/theme-panel off` closes it.
 - `/theme-panel moon keep` switches to a theme by name.
-- `/theme-panel blur off` turns off the frosted blur behind messages, and `/theme-panel blur on` brings it back. The **Blur** switch at the top of the panel does the same.
+- `/theme-panel blur off` turns off the frosted blur behind messages, and `/theme-panel blur on` brings it back. The **Blur** switch at the bottom of the panel does the same.
 
 On Gas Station, the price board in the scene shows this chat's token count, context use and weekly limit.
 

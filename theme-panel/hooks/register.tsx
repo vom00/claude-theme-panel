@@ -397,10 +397,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column" gap={1}>
         <Box key="head" flexDirection="row" justifyContent="space-between" alignItems="center">
-          <Box key="left" flexDirection="row" alignItems="center" gap={2}>
-            <Text dimColor>{`${total} themes`}</Text>
-            <Button key="toggle-blur" label={blurLabel} dimColor={!isBlur} onPress={toggleBlur} />
-          </Box>
+          <Text dimColor>{`${total} themes`}</Text>
           {pages > 1 && (
             <Box key="arrows" flexDirection="row" gap={1}>
               <Button key="up" label="▲" dimColor={p === 0} onPress={() => turn(-1)} />
@@ -420,6 +417,9 @@ export const register: Register = on => {
             </Box>
           </Box>
         ))}
+        <Box key="foot" flexDirection="row">
+          <Button key="toggle-blur" label={blurLabel} dimColor={!isBlur} onPress={toggleBlur} />
+        </Box>
       </Box>
     )
   })
