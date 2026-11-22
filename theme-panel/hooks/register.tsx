@@ -1,0 +1,391 @@
+// Theme panel: a column of theme cards docked on the right of the chat, each a picture of the
+// theme's scene with its name under it. Pressing a name puts that theme on at once; the choice
+// is kept for new sessions. The panel carries every theme itself (twelve BackdropKit themes as
+// they ship, and Rainy Window), so one mod sets and draws whichever is on.
+//
+// The Flightdeck HUD hears each $.theme.set and colours itself from the scene's name, so the
+// HUD changes with the theme.
+//
+// The little sun-over-hills button (🌄) in the desktop prompt footer opens or closes the panel without sending
+// anything to the session. /theme-panel opens or closes the panel too; /theme-panel <name> switches to a theme by name.
+import { atom, read, update } from 'claude-code'
+import type { EngineInterface, Register, SessionContextUsage, SessionRateLimit, ThemeSetArgs, TurnUsage } from 'claude-code'
+
+import { CATALOG, DEFAULT_SLUG, entryOf, findEntry } from './catalog'
+import type { Entry } from './catalog'
+import { fillBoard, textsOf } from './kit/board.js'
+import type { Figures } from './kit/board.js'
+import { BLUR, COLORS, NIGHT_COLORS } from './kit/colors.js'
+import { makeColors } from './kit/make-colors.js'
+import type { Moment, Theme } from './kit/types'
+import { RAINY_LOOK } from './rainy/look'
+import { THUMB_H, THUMB_W, THUMBS } from './thumbs'
+
+const PLUGIN = 'theme-panel'
+const PANE = 'theme-panel'
+const PANE_TITLE = 'Themes'
+/** About how wide a cell of the desktop pane is, CSS pixels. */
+const CELL_PX = 7.6
+/** A blank that is not whitespace (U+2800), so a label of them is kept and draws nothing. */
+const BLANK = '⠀'
+
+const CURRENT_KEY = 'current'
+const PANEL_OFF_KEY = 'panelOff'
+
+/** The theme on now, by slug ('' before the first is set). */
+const current = atom({ plugin: 'theme-panel', key: 'current' } as const, '')
+/** Which page of cards the panel shows. */
+const page = atom({ plugin: 'theme-panel', key: 'page' } as const, 0)
+
+// The cards go four to a page. The desktop app draws nothing of a pane whose drawing runs too
+// large: all nine pictures at once (342 KB) drew nothing, four (129 KB) drew. thumbs.ts keeps
+// the pictures small enough that any page stays under PAGE_BUDGET characters of picture; the
+// tests hold every page to it.
+export const PER_PAGE = 4
+export const PAGE_BUDGET = 125_000
+export const PAGES: readonly (readonly Entry[])[] = Array.from({ length: Math.ceil(CATALOG.length / PER_PAGE) }, (_, i) =>
+  CATALOG.slice(i * PER_PAGE, i * PER_PAGE + PER_PAGE),
+)
+export const pictureSize = (c: Entry) => (THUMBS[c.slug] ?? c.thumb ?? '').length
+
+const LIGHT = makeColors(COLORS)
+const DARK = makeColors(NIGHT_COLORS)
+
+// The time: read from the engine's clock now and then and carried on in between, so drawing
+// never waits.
+let clockAt = Date.now()
+let perfAt = performance.now()
+const now = () => clockAt + (performance.now() - perfAt)
+
+// The theme last set and, for a BackdropKit theme, its moment, read while drawing.
+let onSlug = ''
+let shown: Moment | undefined
+// For a theme that follows the clock by itself (Sunfield): the scheme and glass last worked out.
+let clockLookKey = ''
+
+/**
+ * The moment of `theme` shown: always its night, whatever the hour (the one named night, else its
+ * last dark one, else its last). `ms` is kept so the clock-following version is one change away.
+ */
+export function momentAt(theme: Theme, _ms: number): Moment {
+  const ms = theme.moments
+  return ms.find(m => m.id === 'night') ?? [...ms].reverse().find(m => m.dark) ?? ms[ms.length - 1] ?? ms[0]
+}
+
+/** The whole look for a theme now: its colours, its scene and the glass over it. */
+function lookOf(entry: Entry): ThemeSetArgs {
+  if (!entry.kit) {
+    shown = undefined
+    if (!entry.lookAt) return entry.look ?? RAINY_LOOK
+    const look = entry.lookAt(now())
+    clockLookKey = JSON.stringify([look.overrideColorScheme, look.backdrop])
+    return look
+  }
+  const m = momentAt(entry.kit, now())
+  shown = m
+  return {
+    colors: (m.dark ? DARK : LIGHT).theme,
+    overrideColorScheme: m.dark ? 'dark' : 'light',
+    backdrop: { scene: entry.slug, glass: { blur: BLUR, tint: m.tint, opacity: m.opacity } },
+  }
+}
+
+/** Puts a theme on and records it as the one on. */
+async function apply($: EngineInterface, slug: string) {
+  const entry = entryOf(slug) ?? entryOf(DEFAULT_SLUG) ?? CATALOG[0]!
+  onSlug = entry.slug
+  await update($, current, () => entry.slug)
+  return $.theme.set(lookOf(entry))
+}
+
+/** A press on a card: that theme, now and in new sessions. */
+async function pick($: EngineInterface, slug: string) {
+  if (slug === onSlug) return
+  await $.store.set(CURRENT_KEY, slug).catch(() => undefined)
+  await apply($, slug)
+}
+
+async function openPanel($: EngineInterface) {
+  return $.ui.open({ id: PANE, title: PANE_TITLE })
+}
+
+/** The footer button: opens the panel, or closes it when it is open. No command, no prompt. */
+async function togglePanel($: EngineInterface) {
+  if ((await $.ui.panes()).some(p => p.id === PANE)) {
+    await $.store.set(PANEL_OFF_KEY, true).catch(() => undefined)
+    await $.ui.close({ id: PANE })
+    return
+  }
+  await $.store.delete(PANEL_OFF_KEY).catch(() => undefined)
+  await openPanel($)
+}
+
+/** The footer button's icon: a sun coming up over hills, as on a theme card. */
+export const BUTTON_ICON = '\u{1F304}'
+
+// A scene's motion counts from its --m: the seconds since a fixed moment are written in, so a
+// redrawn scene carries on where it was instead of starting over.
+const MOTION_MARK = '--m:0s'
+const MOTION_EPOCH = Date.UTC(2026, 0, 1)
+const SCENE_LIMIT = 131072
+
+function sceneAt(svg: string, ms: number, lead = 0.2): string {
+  const at = svg.indexOf(MOTION_MARK)
+  if (at < 0) return svg
+  const m = Math.max(0, Math.round(((ms - MOTION_EPOCH) / 1000 + lead) * 20) / 20)
+  const out = svg.slice(0, at) + '--m:' + (m === 0 ? '0' : '-' + m) + 's' + svg.slice(at + MOTION_MARK.length)
+  return out.length <= SCENE_LIMIT ? out : svg
+}
+
+// The price board (Gas Station): the tokens this chat has used, how full the context is and
+// how much of the weekly limit is used, drawn into its scene.
+const TOKENS_KEY = 'tokens:'
+const WEEKLY_KEY = 'weekly'
+const KEEP_CHATS = 60
+let figures: Figures = {}
+let tokensKey: string | undefined
+
+function setFigures(next: Figures): boolean {
+  const before = JSON.stringify(textsOf(figures))
+  figures = next
+  return JSON.stringify(textsOf(next)) !== before
+}
+
+type Reading = { context: SessionContextUsage; rateLimits: readonly SessionRateLimit[] }
+const weekOf = (r: Reading) => r.rateLimits.find(l => l.kind === 'seven_day')
+const withReading = (r: Reading): Figures => ({
+  ...figures,
+  context: r.context.percent ?? figures.context,
+  weekly: weekOf(r)?.percentUsed ?? figures.weekly,
+})
+const tokensOf = (u: TurnUsage) => u.input_tokens + u.output_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens
+
+/** Whether the theme on has a price board, so new figures should redraw it. */
+const boardIsOn = () => entryOf(onSlug)?.kit?.board !== undefined
+
+function sceneOf(theme: Theme, m: Moment): string {
+  if (theme.board === undefined) return m.svg
+  const filled = fillBoard(m.svg, theme.board, m.id, figures)
+  return filled.length <= SCENE_LIMIT ? filled : m.svg
+}
+
+function altOf(theme: Theme, m: Moment): string {
+  if (theme.board === undefined) return m.alt
+  const t = textsOf(figures)
+  return m.alt + ' The price board reads ' + t.tokens + ' tokens, ' + t.context + ' context, ' + t.weekly + ' of the weekly limit.'
+}
+
+// How often the moment is checked against the clock.
+const RESYNC_MS = 5 * 60 * 1000
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** A card's picture: the scene, rounded, with a ring and an ON tag on the theme that is on. */
+export function cardSvg(entry: Entry, isOn: boolean): string {
+  const body = THUMBS[entry.slug] ?? entry.thumb ?? `<rect width='${THUMB_W}' height='${THUMB_H}' fill='#2a2f45'/>`
+  const ring = isOn
+    ? `<rect x='1' y='1' width='${THUMB_W - 2}' height='${THUMB_H - 2}' rx='7' fill='none' stroke='#ffffff' stroke-width='2' shape-rendering='geometricPrecision'/>` +
+      `<rect x='6' y='6' width='22' height='11' rx='5.5' fill='#ffffff' fill-opacity='0.92' shape-rendering='geometricPrecision'/>` +
+      `<text x='17' y='14.2' font-family='Segoe UI,Inter,system-ui,sans-serif' font-size='7' font-weight='700' fill='#141726' text-anchor='middle'>ON</text>`
+    : ''
+  return (
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${THUMB_W} ${THUMB_H}' width='100%' height='100%' preserveAspectRatio='xMidYMid slice'>` +
+    `<title>${esc(entry.name)}</title>` +
+    `<defs><clipPath id='r'><rect width='${THUMB_W}' height='${THUMB_H}' rx='8'/></clipPath></defs>` +
+    `<g clip-path='url(#r)' shape-rendering='crispEdges'>${body}</g>${ring}</svg>`
+  )
+}
+
+export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    await $.command.register({
+      name: 'theme-panel',
+      description: 'Theme panel on the right: open or close it, or switch to a theme by name',
+      argumentHint: '[on|off|<theme name>]',
+    })
+    try {
+      clockAt = await $.clock.now()
+      perfAt = performance.now()
+    } catch {
+      // Keep the time read when the module loaded.
+    }
+    try {
+      tokensKey = TOKENS_KEY + (await $.session.id())
+      const n = await $.store.get(tokensKey)
+      figures = { ...figures, tokens: typeof n === 'number' && Number.isFinite(n) ? n : 0 }
+      const counts = (await $.store.keys()).filter(k => k.startsWith(TOKENS_KEY) && k !== tokensKey)
+      for (const k of counts.slice(0, Math.max(0, counts.length - KEEP_CHATS + 1))) await $.store.delete(k)
+    } catch {
+      // No count to carry on from: the board shows dashes until the first turn ends.
+    }
+    try {
+      const w = (await $.store.get(WEEKLY_KEY)) as { percent?: unknown; resetsAt?: unknown } | undefined
+      const resets = typeof w?.resetsAt === 'string' ? Date.parse(w.resetsAt) : NaN
+      if (typeof w?.percent === 'number' && !(resets <= clockAt)) figures = { ...figures, weekly: w.percent }
+    } catch {
+      // None kept.
+    }
+    try {
+      figures = withReading(await $.session.usage())
+    } catch {
+      // No reading yet.
+    }
+    const kept = await $.store.get(CURRENT_KEY).catch(() => undefined)
+    await apply($, typeof kept === 'string' ? kept : DEFAULT_SLUG)
+    $.clock.every(RESYNC_MS, () => {
+      $.clock
+        .now()
+        .then(ms => {
+          clockAt = ms
+          perfAt = performance.now()
+        })
+        .catch(() => undefined)
+        .then(() => {
+          const entry = entryOf(onSlug)
+          if (entry?.lookAt) {
+            // A theme that follows the clock by itself: its glass is set again when the sky
+            // changes it, and its scene written afresh each time, so a picture the app restarted
+            // (it does on a resize) is never far behind the clock.
+            const before = clockLookKey
+            const look = lookOf(entry)
+            if (clockLookKey === before) return $.ui.invalidate('ui.render')
+            return $.theme.set(look).then(() => $.ui.invalidate('ui.render'))
+          }
+          if (!entry?.kit || momentAt(entry.kit, now()) === shown) return undefined
+          return $.theme.set(lookOf(entry)).then(() => $.ui.invalidate('ui.render'))
+        })
+        .catch(() => undefined)
+    })
+    if ((await $.store.get(PANEL_OFF_KEY).catch(() => undefined)) !== true) void openPanel($).catch(() => undefined)
+    return next(e)
+  })
+
+  on('command.run', { command: 'theme-panel' }, async ($, e) => {
+    const arg = e.args.trim()
+    const verb = arg.toLowerCase()
+    if (verb === 'off') {
+      await $.store.set(PANEL_OFF_KEY, true).catch(() => undefined)
+      if ((await $.ui.panes()).some(p => p.id === PANE)) await $.ui.close({ id: PANE })
+      return { text: 'Theme panel closed, in new sessions too. /theme-panel on brings it back.' }
+    }
+    if (verb === '' || verb === 'on') {
+      await $.store.delete(PANEL_OFF_KEY).catch(() => undefined)
+      const r = await openPanel($)
+      return { text: r.isPlaced ? 'Theme panel open on the right.' : `Theme panel is open but not shown here: ${r.reason}` }
+    }
+    const entry = findEntry(arg)
+    if (!entry) return { text: `No theme "${arg}". Themes: ${CATALOG.map(c => c.name).join(', ')}.` }
+    await pick($, entry.slug)
+    return { text: `${entry.name} is on.` }
+  })
+
+  // Closing the panel by hand keeps it closed in new sessions, until /theme-panel on.
+  on('ui.close', ($, e, next) => {
+    if (e.id === PANE && e.origin.kind === 'person') void $.store.set(PANEL_OFF_KEY, true).catch(() => undefined)
+    return next(e)
+  })
+
+  // The backdrop: the scene of the theme that is on, for this plugin's own sets alone.
+  on('ui.render', { component: 'Backdrop' }, ($, e, next) => {
+    if (e.props.plugin !== $.plugin.name) return next(e)
+    if (e.surface !== 'desktop' && e.surface !== 'mobile') return next(e)
+    const entry = entryOf(e.props.scene)
+    if (!entry) return next(e)
+    const { Svg } = $.ui.resolve(e)
+    if (!entry.kit) {
+      if (entry.svgAt) return <Svg source={entry.svgAt(now())} alt={entry.alt ?? entry.name} isInteractive />
+      if (!entry.svg) return next(e)
+      return entry.isInteractive ? <Svg source={entry.svg()} alt={entry.alt ?? entry.name} isInteractive /> : <Svg source={entry.svg()} alt={entry.alt ?? entry.name} />
+    }
+    const m = shown ?? momentAt(entry.kit, now())
+    return <Svg source={sceneAt(sceneOf(entry.kit, m), now())} alt={altOf(entry.kit, m)} isInteractive />
+  })
+
+  // The price board's figures: redrawn only when what it shows changes and its theme is on.
+  on('session.measure', async ($, e, next) => {
+    const week = weekOf(e)
+    if (week !== undefined && e.changed.includes('rateLimits')) {
+      $.store.set(WEEKLY_KEY, { percent: week.percentUsed, resetsAt: week.resetsAt }).catch(() => undefined)
+    }
+    if (setFigures(withReading(e)) && boardIsOn()) $.ui.invalidate('ui.render')
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    const used = e.usage !== undefined ? tokensOf(e.usage) : 0
+    if (used > 0) {
+      const changed = setFigures({ ...figures, tokens: (figures.tokens ?? 0) + used })
+      if (tokensKey !== undefined) $.store.set(tokensKey, figures.tokens).catch(() => undefined)
+      if (changed && boardIsOn()) $.ui.invalidate('ui.render')
+    }
+    return result
+  })
+
+  // The button in the desktop prompt footer, beside the model picker: a sun over hills. The footer
+  // draws a Button as its label alone (a picture under it, or its children, are left out), so the
+  // icon is the label. A press opens or closes the panel in the mod itself, so nothing is sent to
+  // the session and a turn that is running carries on. The footer's own mode labels follow it.
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
+    if (e.surface !== 'desktop') return next(e)
+    const { Box, Button } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="row" alignItems="center" gap={1}>
+        <Button key="toggle-theme-panel" label={BUTTON_ICON} plain onPress={() => void togglePanel($).catch(() => undefined)} />
+        {await next(e)}
+      </Box>
+    )
+  })
+
+  // The panel: "9 themes" and the page arrows on top, then a page of cards, each the scene's
+  // picture with the theme's name under it. A press anywhere on a card puts that theme on.
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const onNow = await read($, current)
+    const total = CATALOG.length
+    if (e.surface === 'terminal') {
+      const { Box, Text, Button } = $.ui.resolve(e)
+      return (
+        <Box flexDirection="column">
+          <Text dimColor>{`${total} themes`}</Text>
+          {CATALOG.map(c => (
+            <Button key={`pick-${c.slug}`} plain onPress={() => void pick($, c.slug)}>
+              {c.slug === onNow ? `● ${c.name}` : `  ${c.name}`}
+            </Button>
+          ))}
+        </Box>
+      )
+    }
+    const { Box, Text, Button, Svg } = $.ui.resolve(e)
+    const cols = e.props.bodyColumns || e.viewport?.columns || 40
+    const w = Math.round(Math.max(180, Math.min(520, cols * CELL_PX - 6)))
+    const ph = Math.round((w * THUMB_H) / THUMB_W)
+    const pages = PAGES.length
+    const p = Math.max(0, Math.min(await read($, page), pages - 1))
+    const turn = (d: number) => void update($, page, x => Math.max(0, Math.min(pages - 1, Math.min(x, pages - 1) + d)))
+    return (
+      <Box flexDirection="column" gap={1}>
+        <Box key="head" flexDirection="row" justifyContent="space-between" alignItems="center">
+          <Text dimColor>{`${total} themes`}</Text>
+          {pages > 1 && (
+            <Box key="arrows" flexDirection="row" gap={1}>
+              <Button key="up" label="▲" dimColor={p === 0} onPress={() => turn(-1)} />
+              <Button key="down" label="▼" dimColor={p >= pages - 1} onPress={() => turn(1)} />
+            </Box>
+          )}
+        </Box>
+        {PAGES[p]!.map(c => (
+          <Box key={`card-${c.slug}`} flexDirection="column">
+            <Svg source={cardSvg(c, c.slug === onNow)} alt={`${c.name} theme${c.slug === onNow ? ', on now' : ''}`} width={w} height={ph} />
+            <Text bold>{c.name}</Text>
+            {/* One press anywhere on the card: a see-through button laid over the picture and
+                the name, as tall as the card (a row stretches it) and as wide as its blank
+                label, cut to the card's edge. */}
+            <Box key={`hit-${c.slug}`} position="absolute" top={0} left={0} right={0} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
+              <Button key={`pick-${c.slug}`} plain label={BLANK.repeat(Math.ceil(w / 4) + 20)} onPress={() => void pick($, c.slug)} />
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    )
+  })
+}

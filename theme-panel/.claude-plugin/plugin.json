@@ -1,0 +1,6 @@
+{
+  "name": "theme-panel",
+  "version": "0.10.0",
+  "description": "A column of theme cards on the right: click a theme's picture to switch to it. Carries Rainy Window and twelve BackdropKit themes; the Flightdeck HUD recolours to match.",
+  "types": "./types/index.d.ts"
+}

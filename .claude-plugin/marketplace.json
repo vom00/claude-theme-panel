@@ -1,0 +1,17 @@
+{
+  "name": "theme-panel-mods",
+  "metadata": { "description": "A theme switcher panel and a retro HUD for Claude Code." },
+  "owner": { "name": "vom00" },
+  "plugins": [
+    {
+      "name": "theme-panel",
+      "source": "./theme-panel",
+      "description": "Theme cards on the right: click one to switch theme. Every theme stays on its night look."
+    },
+    {
+      "name": "flightdeck-hud",
+      "source": "./flightdeck-hud",
+      "description": "Retro HUD above the prompt that shows context, plan limits, cost and running agents, coloured to match the theme."
+    }
+  ]
+}

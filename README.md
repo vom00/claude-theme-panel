@@ -1,0 +1,33 @@
+# Theme panel and Flightdeck HUD
+
+Two mods for Claude Code. The Theme panel puts a column of theme cards on the right side of the chat, and clicking a card switches the background scene and colours. The Flightdeck HUD sits above the prompt and shows how full the context is, your plan limits, the cost so far and any agents that are running. When you change theme, the HUD picks up the new colours.
+
+## Install
+
+```
+/plugin install theme-panel --marketplace vom00/claude-theme-panel
+/plugin install flightdeck-hud --marketplace vom00/claude-theme-panel
+```
+
+Then run `/reload-plugins` or start a new session.
+
+## Theme panel
+
+There are 13 themes: Rainy Window, Cloud Sea, Deep Reef, Gas Station, Hill Village, Lavender Slope, Mirror Lake, Moon Keep, Side Street, Sunfield, Harbor, Tide Line and Sunbeam Wood. Each one stays on its night version at any hour. The panel shows four cards at a time; use the arrows at the top to page through them. Your pick carries over to new sessions.
+
+In the desktop app there's a 🌄 button in the prompt footer, left of the model name. It opens and closes the panel without sending anything to the chat, so a reply that's running keeps going.
+
+You can also use the command:
+
+- `/theme-panel` opens the panel, `/theme-panel off` closes it.
+- `/theme-panel moon keep` switches to a theme by name.
+
+On Gas Station, the price board in the scene shows this chat's token count, context use and weekly limit.
+
+## Flightdeck HUD
+
+A purple, scanlined readout above the prompt with a portrait, the theme card, the context bar, the 5-hour and weekly limits with their reset times, the session cost and the active agents. It reads the scene name from each theme change, so it matches whichever theme the panel has on.
+
+## Credits
+
+Rainy Window's scene is from the rainy-window plugin by Ishu Agrawal (https://github.com/ishuagrawal/claude-code-themes), under the MIT licence in `theme-panel/hooks/rainy/LICENSE`. The other twelve scenes come from BackdropKit themes.
