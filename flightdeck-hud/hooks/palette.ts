@@ -205,6 +205,41 @@ export const THEMES: Readonly<Record<string, ThemeInfo>> = {
       { name: 'Night', tint: '#0d2237', dark: true, wash: ['#3c5169', '#475e7c', '#3d546f', '#445e77', '#2a3b3d'] },
     ],
   },
+  'snowfall-ridge': {
+    name: 'Snowfall Ridge',
+    bg: '#0b1026',
+    primary: '#ffe0a0',
+    secondary: '#9fd0ff',
+    tertiary: '#c7b8ff',
+    moments: [
+      { name: 'Morning', tint: '#e4ddee', dark: false, wash: ['#494886', '#9c7ea5', '#b48fab', '#7876a3', '#acacd4'] },
+      { name: 'Day', tint: '#dae3f2', dark: false, wash: ['#366ebd', '#6796d1', '#afc0d7', '#8ca1ad', '#ceddef'] },
+      { name: 'Night', tint: '#192140', dark: true, wash: ['#0b122d', '#293358', '#556290', '#3a4771', '#4f629d'] },
+    ],
+  },
+  'rainy-studio': {
+    name: 'Rainy Studio',
+    bg: '#120f1c',
+    primary: '#ffb35c',
+    secondary: '#7fc4e8',
+    tertiary: '#e88fb0',
+    moments: [
+      { name: 'Day', tint: '#dedfe3', dark: false, wash: ['#697382', '#8c9aab', '#8a99aa', '#6d6c71', '#604b3d'] },
+      { name: 'Evening', tint: '#33192b', dark: true, wash: ['#363350', '#6f5372', '#705a77', '#474054', '#372828'] },
+      { name: 'Night', tint: '#271a22', dark: true, wash: ['#1b1d32', '#252641', '#323147', '#352f38', '#241b1d'] },
+    ],
+  },
+  'low-orbit': {
+    name: 'Low Orbit',
+    bg: '#05081a',
+    primary: '#ffcf6b',
+    secondary: '#6fd6ff',
+    tertiary: '#b58cff',
+    moments: [
+      { name: 'Before dawn', tint: '#231f27', dark: true, wash: ['#070912', '#0e101c', '#1d1e29', '#18192c', '#120f20'] },
+      { name: 'Morning', tint: '#26262f', dark: true, wash: ['#070912', '#0e101c', '#303340', '#858898', '#707f9a'] },
+    ],
+  },
   'rainy-window': {
     name: 'Rainy Studio',
     bg: '#0e1116',

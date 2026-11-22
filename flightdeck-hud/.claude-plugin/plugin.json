@@ -1,6 +1,6 @@
 {
   "name": "flightdeck-hud",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Retro Flightdeck HUD above the prompt and a side panel on the right, both coloured to match your theme: portrait, theme card, context, plan limits, cost and active agents",
   "types": "./types/index.d.ts"
 }
