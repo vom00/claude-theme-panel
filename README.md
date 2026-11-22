@@ -34,7 +34,7 @@ Press the round minus button at the end of its top rail to shrink it to a slim s
 
 ## Credits
 
-Fifteen of the sixteen scenes are from [BackdropKit](https://winchxyz.github.io/backdropkit/) by winchxyz, a free, MIT-licensed set of animated pixel-art themes ([source](https://github.com/winchxyz/backdropkit)). You can download and install each one on its own from that page.
+Fifteen of the sixteen scenes are from [BackdropKit](https://winchxyz.github.io/backdropkit/) by winchxyz, a free, MIT-licensed set of animated pixel-art themes ([source](https://github.com/winchxyz/backdropkit)). You can download and install each one on its own from that page. Its licence is in `theme-panel/hooks/kit/LICENSE` and `theme-panel/hooks/sunfield/LICENSE`.
 
 Rainy Window's scene is from the rainy-window plugin by Ishu Agrawal (https://github.com/ishuagrawal/claude-code-themes), under the MIT licence in `theme-panel/hooks/rainy/LICENSE`.
 

@@ -28,7 +28,8 @@ they will set their own theme when a session starts.
 
 - Rainy Window's scene and Clawd are from the rainy-window plugin by Ishu Agrawal, MIT licence
   (`hooks/rainy/LICENSE`).
-- The eight other scenes are from BackdropKit theme packs, kept here for personal use.
+- The other fifteen scenes are from BackdropKit by winchxyz, MIT licence
+  (`hooks/kit/LICENSE` and `hooks/sunfield/LICENSE`).
 
 In the desktop app a small 🌄 button sits in the prompt footer, beside the model picker:
 click it to open or close the panel. It sends nothing to the chat, so a running turn carries on.
