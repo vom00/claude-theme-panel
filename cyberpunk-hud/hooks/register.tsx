@@ -341,7 +341,7 @@ export const register: Register = on => {
     // A see-through button laid over part of a picture: a blank label wide enough to fill the
     // box, cut to its edge, so a press anywhere on that part lands on it.
     const hit = (key: string, w: number, onPress: () => void) => (
-      <Box key={`${key}-hit`} position="absolute" top={0} right={0} width={w} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
+      <Box key={`${key}-hit`} position="absolute" top={0} left={0} right={0} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
         <Button key={key} plain label={BLANK.repeat(Math.ceil(w / 4) + 20)} onPress={onPress} />
       </Box>
     )
@@ -351,7 +351,7 @@ export const register: Register = on => {
       // anywhere on it brings the HUD back.
       const sh = Math.round((HUD_W * STRIP_H) / STRIP_W)
       return (
-        <Box width={HUD_W} height={sh}>
+        <Box flexDirection="column">
           <Svg source={renderStrip(normalize(snap.data), { palette })} alt="Cyberpunk HUD, minimized" width={HUD_W} height={sh} />
           {hit('hud-restore', HUD_W, () => void setMinimized($, false))}
         </Box>
@@ -376,9 +376,9 @@ export const register: Register = on => {
     const chipW = Math.ceil((1080 - HIDE_CHIP.x + 4) * scale)
     const chipH = Math.ceil((HIDE_CHIP.y + HIDE_CHIP.h + 4) * scale)
     return (
-      <Box width={HUD_W} height={hh}>
+      <Box flexDirection="column">
         <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={hh} isInteractive />
-        <Box key="corner" position="absolute" top={0} right={0} width={chipW} height={chipH} flexDirection="row" alignItems="stretch" overflow="hidden">
+        <Box key="corner" position="absolute" top={0} right={0} width={`${Math.ceil((100 * chipW) / HUD_W)}%`} height={`${Math.ceil((100 * chipH) / hh)}%`} flexDirection="row" alignItems="stretch" overflow="hidden">
           <Button key="hud-minimize" plain label={BLANK.repeat(Math.ceil(chipW / 4) + 20)} onPress={() => void setMinimized($, true)} />
         </Box>
       </Box>
