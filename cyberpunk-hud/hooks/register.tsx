@@ -17,7 +17,7 @@ const PANE = 'cyberpunk'
 const PANE_TITLE = 'Cyberpunk'
 /** About how wide one cell of the desktop pane's code font is, CSS pixels. */
 const CELL_PX = 7.6
-/** A blank that is not whitespace (U+2800): a label of them draws nothing and is kept. */
+/** A blank that is not whitespace (U+2800), drawn transparent: some fonts show it as faint dots. */
 const BLANK = '⠀'
 
 /** Live numbers, written on every event. The drawing never reads this one. */
@@ -336,13 +336,15 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.surface !== 'desktop' || e.props.hasSurvey || e.props.isCollapsed) return next(e)
     // (never name a local `h`: JSX compiles to the global h())
-    const { Box, Button, Svg } = $.ui.resolve(e)
+    const { Box, Button, Svg, Text } = $.ui.resolve(e)
     const palette = paletteOf(await read($, look))
     // A see-through button laid over part of a picture: a blank label wide enough to fill the
     // box, cut to its edge, so a press anywhere on that part lands on it.
     const hit = (key: string, w: number, onPress: () => void) => (
       <Box key={`${key}-hit`} position="absolute" top={0} left={0} right={0} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
-        <Button key={key} plain label={BLANK.repeat(Math.ceil(w / 4) + 20)} onPress={onPress} />
+        <Button key={key} plain onPress={onPress}>
+          <Text color="transparent">{BLANK.repeat(Math.ceil(w / 4) + 20)}</Text>
+        </Button>
       </Box>
     )
     const snap = await read($, view)
@@ -379,7 +381,9 @@ export const register: Register = on => {
       <Box flexDirection="column">
         <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={hh} isInteractive />
         <Box key="corner" position="absolute" top={0} right={0} width={`${Math.ceil((100 * chipW) / HUD_W)}%`} height={`${Math.ceil((100 * chipH) / hh)}%`} flexDirection="row" alignItems="stretch" overflow="hidden">
-          <Button key="hud-minimize" plain label={BLANK.repeat(Math.ceil(chipW / 4) + 20)} onPress={() => void setMinimized($, true)} />
+          <Button key="hud-minimize" plain onPress={() => void setMinimized($, true)}>
+            <Text color="transparent">{BLANK.repeat(Math.ceil(chipW / 4) + 20)}</Text>
+          </Button>
         </Box>
       </Box>
     )

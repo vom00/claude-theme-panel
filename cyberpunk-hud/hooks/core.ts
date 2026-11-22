@@ -329,32 +329,59 @@ export function portraitBlock(x: number, y: number, w: number, h: number, art: P
   ].join('')
 }
 
-/** The minimize button at the HUD's top-right, in the HUD's 1080-wide units: where the rail stops for it. */
-export const HIDE_CHIP = { x: 1030, y: 1, w: 26, h: 26 }
+/**
+ * The minimize button at the HUD's top-right, in the HUD's 1080-wide units: a bead at the end
+ * of the top rail, centred on it (the rail runs at y 13).
+ */
+export const HIDE_CHIP = { x: 1036, y: 2, w: 22, h: 22 }
 
-/** A round minimize button: filled with the HUD's accent, a darker rim, a soft shine and a dark minus. */
+/** The rail's dash period (16 on, 11 off), so it can stop on a whole dash. */
+const DASH = 27
+
+/** A round button's disc: the fill, and a thin dark rim inside it so it reads as a button. */
+function disc(cx: number, cy: number, r: number, fill: string): string {
+  return (
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${r - 1}" fill="none" stroke="#000000" stroke-opacity="0.28" stroke-width="2"/>`
+  )
+}
+
+/** The round minimize button: a disc in the HUD's pink (not the amber of its rails) with a dark minus. */
 function minimizeButton(x: number, y: number, d: number): string {
   const r = d / 2
   const cx = x + r
   const cy = y + r
-  return [
-    `<defs><radialGradient id="minShine" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/></radialGradient></defs>`,
-    `<circle cx="${cx}" cy="${cy}" r="${r - 1}" fill="${C.amber}" stroke="${C.amberDim}" stroke-width="2"/>`,
-    `<circle cx="${cx}" cy="${cy}" r="${r - 2}" fill="url(#minShine)"/>`,
-    `<line x1="${cx - r * 0.45}" y1="${cy}" x2="${cx + r * 0.45}" y2="${cy}" stroke="${C.bg}" stroke-width="${(d * 0.13).toFixed(1)}" stroke-linecap="round" opacity="0.85"/>`,
-  ].join('')
+  return (
+    disc(cx, cy, r, C.pink) +
+    `<line x1="${(cx - r * 0.48).toFixed(1)}" y1="${cy}" x2="${(cx + r * 0.48).toFixed(1)}" y2="${cy}" stroke="${C.bg}" stroke-width="${(d * 0.14).toFixed(1)}" stroke-linecap="round" opacity="0.9"/>`
+  )
 }
 
-/** A chip with a chevron and a word: the HUD's own buttons, drawn in its colours. */
-function chip(x: number, y: number, w: number, hgt: number, word: string, isUp: boolean): string {
-  const cx = x + 17
-  const cy = y + hgt / 2
-  const chev = isUp ? `M${cx - 6} ${cy + 3} L${cx} ${cy - 3} L${cx + 6} ${cy + 3}` : `M${cx - 6} ${cy - 3} L${cx} ${cy + 3} L${cx + 6} ${cy - 3}`
-  return [
-    `<rect x="${x}" y="${y}" width="${w}" height="${hgt}" rx="5" fill="${C.amberDeep}" stroke="${C.amber}" stroke-width="1.6"/>`,
-    `<path d="${chev}" fill="none" stroke="${C.amber}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`,
-    text(x + 31, cy + 5.5, word, { size: 15, fill: C.amber, weight: 700, ls: 2 }),
-  ].join('')
+/** The round maximize button: a disc in the HUD's cyan with two dark corner arrows, up-right and down-left. */
+function maximizeButton(cx: number, cy: number, r: number): string {
+  const a = r * 0.5
+  const g = r * 0.1
+  return (
+    disc(cx, cy, r, C.cyan) +
+    `<path d="M${(cx - a * 0.35 + g).toFixed(1)} ${(cy - a).toFixed(1)}H${(cx + a).toFixed(1)}V${(cy + a * 0.35 - g).toFixed(1)}Z` +
+    `M${(cx + a * 0.35 - g).toFixed(1)} ${(cy + a).toFixed(1)}H${(cx - a).toFixed(1)}V${(cy - a * 0.35 + g).toFixed(1)}Z" fill="${C.bg}" opacity="0.9"/>`
+  )
+}
+
+/**
+ * The HUD's mark: a rune of a long blade with a zigzag crossing it, drawn in the given colour and
+ * fitted into a box `h` tall with its top-left at x, y.
+ */
+function rune(x: number, y: number, h: number, fill: string): string {
+  // drawn on a 640 x 1140 field (the shape's own bounds)
+  const w = (h * 640) / 1140
+  return (
+    `<svg x="${x}" y="${y}" width="${w.toFixed(1)}" height="${h}" viewBox="280 30 640 1140" fill="${fill}">` +
+    `<path d="M584 40Q624 600 584 1150Q544 600 584 40Z"/>` +
+    `<polyline points="567,207 348,272 536,392 352,503 818,810 668,910" fill="none" stroke="${fill}" stroke-width="58" stroke-linejoin="miter" stroke-miterlimit="12"/>` +
+    `<polygon points="632,908 702,908 898,1160"/>` +
+    `</svg>`
+  )
 }
 
 /** The HUD minimized: one slim strip with its name, three readings and a SHOW chip. */
@@ -365,7 +392,6 @@ export function renderStrip(h: Hud, o: { palette?: Palette }): string {
   const W = STRIP_W
   const H = STRIP_H
   const cy = H / 2
-  const hex = [0, 1, 2, 3, 4, 5].map(i => `${(30 + 11 * Math.cos((Math.PI / 3) * i - Math.PI / 2)).toFixed(1)},${(cy + 11 * Math.sin((Math.PI / 3) * i - Math.PI / 2)).toFixed(1)}`).join(' ')
   const pctOf = (kind: string) => h.limits.find(l => l.kind === kind)?.pct
   const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '--' : `${Math.round(n)}%`)
   const colourOf = (n: number | null | undefined) => (n !== null && n !== undefined && n >= 80 ? C.red : C.cyan)
@@ -379,14 +405,13 @@ export function renderStrip(h: Hud, o: { palette?: Palette }): string {
     `<defs>${sharedDefs()}</defs>`,
     `<rect x="1" y="1" width="${W - 2}" height="${H - 2}" rx="10" fill="${C.bg}" stroke="${C.edge}" stroke-width="2"/>`,
     `<line x1="18" y1="4" x2="${W - 18}" y2="4" stroke="${C.amber}" stroke-width="2" stroke-dasharray="16 11" opacity="0.8"/>`,
-    `<polygon points="${hex}" fill="none" stroke="${C.cyan}" stroke-width="2.2"/>`,
-    `<circle cx="30" cy="${cy}" r="3.4" fill="${C.pink}"/>`,
+    rune(20, 6, 34, C.cyan),
     text(52, cy + 6, 'CYBERPUNK HUD', { size: 17, fill: C.amber, weight: 700, ls: 2.5 }),
     `<line x1="252" y1="12" x2="252" y2="${H - 12}" stroke="${C.amberDim}" stroke-dasharray="2 4" opacity="0.7"/>`,
     reading(276, 'CONTEXT', ctx),
     reading(480, '5-HOUR', five),
     reading(670, 'WEEKLY', week),
-    chip(W - 18 - 100, cy - 13, 100, 26, 'SHOW', true),
+    maximizeButton(W - 32, cy, 12),
     `</svg>`,
   ].join('')
 }
@@ -397,7 +422,8 @@ export function renderHud(h: Hud, o: { now: number; phaseNow?: number; isWorking
   const W = 1080
   const H = 236
   const { now, isWorking } = o
-  const railEnd = o.hideChip ? HIDE_CHIP.x - 12 : 1062
+  // with the minimize button, the rail stops on a whole dash a clear gap before it
+  const railEnd = o.hideChip ? 18 + Math.floor((HIDE_CHIP.x - 14 - 18 + 11) / DASH) * DASH - 11 : 1062
   const dashes = `<line x1="18" y1="13" x2="${railEnd}" y2="13" stroke="${C.amber}" stroke-width="2.5" stroke-dasharray="16 11">${
     isWorking ? '<animate attributeName="stroke-dashoffset" from="0" to="-54" dur="1.6s" repeatCount="indefinite"/>' : ''
   }</line>`

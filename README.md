@@ -28,7 +28,7 @@ On Gas Station, the price board in the scene shows this chat's token count, cont
 
 A purple, scanlined readout above the prompt with a portrait, the theme card, the context bar, the 5-hour and weekly limits with their reset times, the session cost and the active agents. It reads the scene name from each theme change, so it matches whichever theme the panel has on.
 
-Press the round minus button in its top-right corner to shrink it to a slim strip that still shows context and plan limits; click anywhere on the strip to bring the full HUD back. It stays minimized in new sessions until you bring it back (`/hud on` works too).
+Press the round minus button at the end of its top rail to shrink it to a slim strip with the HUD's rune, your context and plan limits; click anywhere on the strip (or its round maximize button) to bring the full HUD back. It stays minimized in new sessions until you bring it back (`/hud on` works too).
 
 ## Credits
 
