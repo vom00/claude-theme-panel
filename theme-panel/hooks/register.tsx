@@ -236,8 +236,24 @@ const RESYNC_MS = 5 * 60 * 1000
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** A card's picture: the scene, rounded, with a ring and an ON tag on the theme that is on. */
-export function cardSvg(entry: Entry, isOn: boolean): string {
-  const body = THUMBS[entry.slug] ?? entry.thumb ?? `<rect width='${THUMB_W}' height='${THUMB_H}' fill='#2a2f45'/>`
+/** About how big the desktop pane draws one time-of-day button, CSS pixels. */
+const TIME_BUTTON_W = 38
+const TIME_BUTTON_H = 30
+
+/**
+ * A card's picture. `buttons` time-of-day buttons sit in its top-right corner over a card drawn
+ * `w` pixels wide: a dark tab is drawn behind them, so they stand out on a bright sky.
+ */
+export function cardSvg(entry: Entry, isOn: boolean, buttons = 0, w = 0): string {
+  let body = THUMBS[entry.slug] ?? entry.thumb ?? `<rect width='${THUMB_W}' height='${THUMB_H}' fill='#2a2f45'/>`
+  if (buttons > 0 && w > 0) {
+    const k = THUMB_W / w
+    const tw = (buttons * TIME_BUTTON_W + 10) * k
+    const th = (TIME_BUTTON_H + 4) * k
+    const r = 8 * k
+    // Rounded at its lower left; its other corners run past the card's edge and are cut by it.
+    body += `<rect x='${(THUMB_W - tw).toFixed(1)}' y='${(-r).toFixed(1)}' width='${(tw + r).toFixed(1)}' height='${(th + r).toFixed(1)}' rx='${r.toFixed(1)}' fill='#0b0d1a' fill-opacity='0.78' shape-rendering='geometricPrecision'/>`
+  }
   const ring = isOn
     ? `<rect x='1' y='1' width='${THUMB_W - 2}' height='${THUMB_H - 2}' rx='7' fill='none' stroke='#ffffff' stroke-width='2' shape-rendering='geometricPrecision'/>` +
       `<rect x='6' y='6' width='22' height='11' rx='5.5' fill='#ffffff' fill-opacity='0.92' shape-rendering='geometricPrecision'/>` +
@@ -458,7 +474,7 @@ export const register: Register = on => {
         </Box>
         {PAGES[p]!.map(c => (
           <Box key={`card-${c.slug}`} flexDirection="column">
-            <Svg source={cardSvg(c, c.slug === onNow)} alt={`${c.name} theme${c.slug === onNow ? ', on now' : ''}`} width={w} height={ph} />
+            <Svg source={cardSvg(c, c.slug === onNow, (c.slots?.length ?? 0) > 1 ? c.slots!.length : 0, w)}alt={`${c.name} theme${c.slug === onNow ? ', on now' : ''}`} width={w} height={ph} />
             <Text bold>{c.name}</Text>
             {/* One press anywhere on the card: a see-through button laid over the picture and
                 the name, as tall as the card (a row stretches it) and as wide as its blank
@@ -475,7 +491,7 @@ export const register: Register = on => {
                   <Button
                     key={`time-${c.slug}-${s}`}
                     label={SLOT_ICON[s]}
-                    {...(slotOf(c, picked) === s ? { variant: 'primary' as const } : { dimColor: true })}
+                    {...(slotOf(c, picked) === s ? { variant: 'primary' as const } : {})}
                     onPress={() => void pickTime($, c.slug, s).catch(() => undefined)}
                   />
                 ))}
