@@ -28,6 +28,8 @@ On Gas Station, the price board in the scene shows this chat's token count, cont
 
 A purple, scanlined readout above the prompt with a portrait, the theme card, the context bar, the 5-hour and weekly limits with their reset times, the session cost and the active agents. It reads the scene name from each theme change, so it matches whichever theme the panel has on.
 
+Press ▾ in its top-right corner to shrink it to a small neon badge, and ▴ next to the badge to bring it back. It stays minimized in new sessions until you bring it back (`/hud on` works too).
+
 ## Credits
 
 Fifteen of the sixteen scenes are from [BackdropKit](https://winchxyz.github.io/backdropkit/) by winchxyz, a free, MIT-licensed set of animated pixel-art themes ([source](https://github.com/winchxyz/backdropkit)). You can download and install each one on its own from that page.

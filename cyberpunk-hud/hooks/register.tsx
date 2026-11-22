@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Agent, Hud, Look } from '../types'
 import { EMPTY, groupCategories, normalize, renderHud } from './core'
 import { cardOf, paletteOf } from './palette'
+import type { Palette } from './palette'
 import { MINI_H, MINI_W, PANEL_H, PANEL_W, renderMini, renderPanel } from './panel'
 import { PORTRAIT, PORTRAIT_H, PORTRAIT_W } from './portrait'
 
@@ -29,6 +30,7 @@ const look = atom({ plugin: 'cyberpunk-hud', key: 'look' } as const, null as Loo
 
 const LOOK_KEY = 'look'
 const PANEL_OFF_KEY = 'panelOff'
+const MIN_KEY = 'minimized'
 
 const sameLook = (a: Look, b: Look) =>
   (a?.scene ?? '') === (b?.scene ?? '') && (a?.tint ?? '').toLowerCase() === (b?.tint ?? '').toLowerCase() && (a?.plugin ?? '') === (b?.plugin ?? '')
@@ -42,6 +44,33 @@ async function setLook($: EngineInterface, next: Look) {
 
 async function openPanel($: EngineInterface) {
   return $.ui.open({ id: PANE, title: PANE_TITLE })
+}
+
+/** Minimizes the HUD to its badge, or brings it back; kept for new sessions too. */
+async function setMinimized($: EngineInterface, isMin: boolean) {
+  await update($, isHidden, () => isMin)
+  await (isMin ? $.store.set(MIN_KEY, true) : $.store.delete(MIN_KEY)).catch(() => undefined)
+}
+
+/** The minimized HUD's badge: a neon chip with a hex mark and the name, in the theme's colours. */
+export const BADGE_W = 136
+export const BADGE_H = 22
+export function badgeSvg(p: Palette): string {
+  const hex = (cx: number, cy: number, r: number) =>
+    [0, 1, 2, 3, 4, 5].map(i => `${(cx + r * Math.cos((Math.PI / 3) * i - Math.PI / 2)).toFixed(2)},${(cy + r * Math.sin((Math.PI / 3) * i - Math.PI / 2)).toFixed(2)}`).join(' ')
+  return (
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${BADGE_W} ${BADGE_H}'>` +
+    `<defs><pattern id='sl' width='2' height='2' patternUnits='userSpaceOnUse'><rect width='2' height='1' fill='#ffffff' fill-opacity='.05'/></pattern>` +
+    `<filter id='gl' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='1.1'/><feMerge><feMergeNode/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs>` +
+    `<rect x='.5' y='.5' width='${BADGE_W - 1}' height='${BADGE_H - 1}' rx='4' fill='${p.bg}'/>` +
+    `<rect x='.5' y='.5' width='${BADGE_W - 1}' height='${BADGE_H - 1}' rx='4' fill='url(#sl)'/>` +
+    `<path d='M4 .5H.5V4M${BADGE_W - 4} ${BADGE_H - 0.5}H${BADGE_W - 0.5}V${BADGE_H - 4}' fill='none' stroke='${p.cyan}' stroke-width='1.4'/>` +
+    `<rect x='.5' y='.5' width='${BADGE_W - 1}' height='${BADGE_H - 1}' rx='4' fill='none' stroke='${p.pink}' stroke-opacity='.7'/>` +
+    `<g filter='url(#gl)'><polygon points='${hex(12, 11, 6.2)}' fill='none' stroke='${p.cyan}' stroke-width='1.4'/>` +
+    `<circle cx='12' cy='11' r='1.8' fill='${p.pink}'/></g>` +
+    `<text x='24' y='14.6' font-family='Consolas,Menlo,monospace' font-size='9.5' font-weight='700' letter-spacing='1.4' fill='${p.amber}' filter='url(#gl)'>CYBERPUNK HUD</text>` +
+    `</svg>`
+  )
 }
 
 const limitOf = (r: { kind: string; percentUsed: number; resetsAt?: string }) => {
@@ -118,6 +147,7 @@ export const register: Register = on => {
       if (kept && typeof kept === 'object') await update($, look, () => kept)
     }
     if ((await $.store.get(PANEL_OFF_KEY).catch(() => undefined)) !== true) void openPanel($).catch(() => undefined)
+    if ((await $.store.get(MIN_KEY).catch(() => undefined)) === true) await update($, isHidden, () => true)
     const [u, t] = await Promise.all([$.session.usage().catch(() => null), $.clock.now()])
     await update($, hud, x => {
       const s = normalize(x)
@@ -151,8 +181,8 @@ export const register: Register = on => {
   on('command.run', { command: 'hud' }, async ($, e) => {
     const verb = e.args.trim().toLowerCase()
     const hide = verb === 'off' ? true : verb === 'on' ? false : !(await read($, isHidden))
-    await update($, isHidden, () => hide)
-    return { text: hide ? 'Cyberpunk HUD hidden. /hud on brings it back.' : 'Cyberpunk HUD on.' }
+    await setMinimized($, hide)
+    return { text: hide ? 'Cyberpunk HUD minimized. Press ▴ or /hud on to bring it back.' : 'Cyberpunk HUD on.' }
   })
 
   on('command.run', { command: 'hud-panel' }, async ($, e) => {
@@ -323,10 +353,20 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.surface !== 'desktop' || e.props.hasSurvey || e.props.isCollapsed || (await read($, isHidden))) return next(e)
+    if (e.surface !== 'desktop' || e.props.hasSurvey || e.props.isCollapsed) return next(e)
     // (never name a local `h`: JSX compiles to the global h())
+    const { Box, Button, Svg } = $.ui.resolve(e)
+    const palette = paletteOf(await read($, look))
+    if (await read($, isHidden)) {
+      // Minimized: the badge, and ▴ beside it to bring the HUD back.
+      return (
+        <Box flexDirection="row" alignItems="center" gap={1}>
+          <Svg source={badgeSvg(palette)} alt="Cyberpunk HUD, minimized" width={BADGE_W} height={BADGE_H} />
+          <Button key="hud-restore" label="▴" plain onPress={() => void setMinimized($, false)} />
+        </Box>
+      )
+    }
     const snap = await read($, view)
-    const { Svg } = $.ui.resolve(e)
     const source = renderHud(normalize(snap.data), {
       now: snap.now || Date.now(),
       // animations resume where they were instead of restarting on a redraw
@@ -336,9 +376,17 @@ export const register: Register = on => {
       portraitW: PORTRAIT_W,
       portraitH: PORTRAIT_H,
       name: NAME,
-      palette: paletteOf(await read($, look)),
+      palette,
     })
-    // an interactive Svg draws in a frame: without a size it falls back to 300x150
-    return <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={Math.round((HUD_W * 236) / 1080)} isInteractive />
+    // an interactive Svg draws in a frame: without a size it falls back to 300x150. ▾ sits over
+    // its top-right corner and minimizes it to the badge.
+    return (
+      <Box flexDirection="column">
+        <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={Math.round((HUD_W * 236) / 1080)} isInteractive />
+        <Box key="corner" position="absolute" top={0} right={0}>
+          <Button key="hud-minimize" label="▾" plain onPress={() => void setMinimized($, true)} />
+        </Box>
+      </Box>
+    )
   })
 }
