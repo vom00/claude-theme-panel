@@ -7,6 +7,8 @@ declare module 'claude-code' {
       page: number
       /** Whether the frosted blur behind the app's panels and messages is on. */
       blurOn: boolean
+      /** The time of day picked on each theme's card ('day', 'sunset' or 'night'), by slug. */
+      times: Record<string, string>
     }
   }
 }

@@ -19,6 +19,8 @@ import { BLUR, COLORS, NIGHT_COLORS } from './kit/colors.js'
 import { makeColors } from './kit/make-colors.js'
 import type { Moment, Theme } from './kit/types'
 import { RAINY_LOOK } from './rainy/look'
+import { isSlot, kitMoment, nightMoment, SLOT_ICON, SLOT_NAME, SLOTS } from './slots'
+import type { Slot } from './slots'
 import { THUMB_H, THUMB_W, THUMBS } from './thumbs'
 
 const PLUGIN = 'theme-panel'
@@ -41,6 +43,19 @@ const page = atom({ plugin: 'theme-panel', key: 'page' } as const, 0)
 const blurOn = atom({ plugin: 'theme-panel', key: 'blurOn' } as const, true)
 // The same, for the places that set a look outside a drawing.
 let isBlurOn = true
+const TIMES_KEY = 'times'
+/** The time of day picked on each theme's card, by slug; a theme not in it shows its night. */
+const times = atom({ plugin: 'theme-panel', key: 'times' } as const, {} as Record<string, string>)
+// The same, for the places that set a look outside a drawing.
+let timesNow: Record<string, string> = {}
+
+/** The time of day `entry` shows: the one picked on its card, else night (where it has times). */
+export function slotOf(entry: Entry, picked: Record<string, string> = timesNow): Slot | undefined {
+  const offered = entry.slots ?? []
+  const p = picked[entry.slug]
+  if (isSlot(p) && offered.includes(p)) return p
+  return offered.includes('night') ? 'night' : offered[0]
+}
 
 // The cards go four to a page. The desktop app draws nothing of a pane whose drawing runs too
 // large: all nine pictures at once (342 KB) drew nothing, four (129 KB) drew. thumbs.ts keeps
@@ -69,24 +84,30 @@ let shown: Moment | undefined
 let clockLookKey = ''
 
 /**
- * The moment of `theme` shown: always its night, whatever the hour (the one named night, else its
- * last dark one, else its last). `ms` is kept so the clock-following version is one change away.
+ * The night of `theme`, whatever the hour (the one named night, else its last dark one, else its
+ * last). `ms` is kept so the clock-following version is one change away.
  */
 export function momentAt(theme: Theme, _ms: number): Moment {
-  const ms = theme.moments
-  return ms.find(m => m.id === 'night') ?? [...ms].reverse().find(m => m.dark) ?? ms[ms.length - 1] ?? ms[0]
+  return nightMoment(theme)
+}
+
+/** The moment of a BackdropKit theme shown: the time picked on its card, else its night. */
+function momentOf(entry: Entry & { kit: Theme }): Moment {
+  const slot = slotOf(entry)
+  return (slot && kitMoment(entry.kit, slot)) ?? momentAt(entry.kit, now())
 }
 
 /** The whole look for a theme now: its colours, its scene and the glass over it. */
 function lookOf(entry: Entry): ThemeSetArgs {
   if (!entry.kit) {
     shown = undefined
+    if (entry.lookFor) return entry.lookFor(slotOf(entry) ?? 'night')
     if (!entry.lookAt) return entry.look ?? RAINY_LOOK
-    const look = entry.lookAt(now())
+    const look = entry.lookAt(now(), slotOf(entry))
     clockLookKey = JSON.stringify([look.overrideColorScheme, look.backdrop])
     return look
   }
-  const m = momentAt(entry.kit, now())
+  const m = momentOf({ ...entry, kit: entry.kit })
   shown = m
   return {
     colors: (m.dark ? DARK : LIGHT).theme,
@@ -118,6 +139,18 @@ async function apply($: EngineInterface, slug: string) {
   onSlug = entry.slug
   await update($, current, () => entry.slug)
   return setLook($, lookOf(entry))
+}
+
+/** A press on a card's day, sunset or night button: that theme at that time, now and in new sessions. */
+async function pickTime($: EngineInterface, slug: string, slot: Slot) {
+  const entry = entryOf(slug)
+  if (!entry?.slots?.includes(slot)) return
+  timesNow = { ...timesNow, [slug]: slot }
+  await update($, times, () => timesNow)
+  await $.store.set(TIMES_KEY, timesNow).catch(() => undefined)
+  await $.store.set(CURRENT_KEY, slug).catch(() => undefined)
+  await apply($, slug)
+  $.ui.invalidate('ui.render')
 }
 
 /** A press on a card: that theme, now and in new sessions. */
@@ -223,7 +256,7 @@ export const register: Register = on => {
     await $.command.register({
       name: 'theme-panel',
       description: 'Theme panel on the right: open or close it, or switch to a theme by name',
-      argumentHint: '[on|off|<theme name>]',
+      argumentHint: '[on|off|blur on|blur off|<theme name> [day|sunset|night]]',
     })
     try {
       clockAt = await $.clock.now()
@@ -254,6 +287,9 @@ export const register: Register = on => {
     }
     isBlurOn = (await $.store.get(BLUR_OFF_KEY).catch(() => undefined)) !== true
     await update($, blurOn, () => isBlurOn)
+    const keptTimes = await $.store.get(TIMES_KEY).catch(() => undefined)
+    timesNow = keptTimes && typeof keptTimes === 'object' ? { ...(keptTimes as Record<string, string>) } : {}
+    await update($, times, () => timesNow)
     const kept = await $.store.get(CURRENT_KEY).catch(() => undefined)
     await apply($, typeof kept === 'string' ? kept : DEFAULT_SLUG)
     $.clock.every(RESYNC_MS, () => {
@@ -275,7 +311,7 @@ export const register: Register = on => {
             if (clockLookKey === before) return $.ui.invalidate('ui.render')
             return setLook($, look).then(() => $.ui.invalidate('ui.render'))
           }
-          if (!entry?.kit || momentAt(entry.kit, now()) === shown) return undefined
+          if (!entry?.kit || momentOf({ ...entry, kit: entry.kit }) === shown) return undefined
           return setLook($, lookOf(entry)).then(() => $.ui.invalidate('ui.render'))
         })
         .catch(() => undefined)
@@ -301,6 +337,20 @@ export const register: Register = on => {
       await setBlur($, verb === 'blur on')
       return { text: `Blur behind messages ${verb === 'blur on' ? 'on' : 'off'}.` }
     }
+    // "<theme name> day|sunset|night": that theme at that time of day.
+    const words = arg.split(/\s+/)
+    const last = words[words.length - 1]?.toLowerCase()
+    if (words.length > 1 && isSlot(last)) {
+      const timed = findEntry(words.slice(0, -1).join(' '))
+      if (timed) {
+        if (!timed.slots?.includes(last)) {
+          const has = (timed.slots ?? []).map(s => SLOT_NAME[s].toLowerCase())
+          return { text: has.length ? `${timed.name} has ${has.join(', ')} only.` : `${timed.name} has one look only.` }
+        }
+        await pickTime($, timed.slug, last)
+        return { text: `${timed.name} is on, at ${SLOT_NAME[last].toLowerCase()}.` }
+      }
+    }
     const entry = findEntry(arg)
     if (!entry) return { text: `No theme "${arg}". Themes: ${CATALOG.map(c => c.name).join(', ')}.` }
     await pick($, entry.slug)
@@ -321,11 +371,11 @@ export const register: Register = on => {
     if (!entry) return next(e)
     const { Svg } = $.ui.resolve(e)
     if (!entry.kit) {
-      if (entry.svgAt) return <Svg source={entry.svgAt(now())} alt={entry.alt ?? entry.name} isInteractive />
+      if (entry.svgAt) return <Svg source={entry.svgAt(now(), slotOf(entry))} alt={entry.alt ?? entry.name} isInteractive />
       if (!entry.svg) return next(e)
       return entry.isInteractive ? <Svg source={entry.svg()} alt={entry.alt ?? entry.name} isInteractive /> : <Svg source={entry.svg()} alt={entry.alt ?? entry.name} />
     }
-    const m = shown ?? momentAt(entry.kit, now())
+    const m = shown ?? momentOf({ ...entry, kit: entry.kit })
     return <Svg source={sceneAt(sceneOf(entry.kit, m), now())} alt={altOf(entry.kit, m)} isInteractive />
   })
 
@@ -370,6 +420,7 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const onNow = await read($, current)
     const isBlur = await read($, blurOn)
+    const picked = await read($, times)
     const blurLabel = isBlur ? '◉ Blur on' : '○ Blur off'
     const toggleBlur = () => void setBlur($, !isBlur).catch(() => undefined)
     const total = CATALOG.length
@@ -415,6 +466,21 @@ export const register: Register = on => {
             <Box key={`hit-${c.slug}`} position="absolute" top={0} left={0} right={0} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
               <Button key={`pick-${c.slug}`} plain label={BLANK.repeat(Math.ceil(w / 4) + 20)} onPress={() => void pick($, c.slug)} />
             </Box>
+            {/* The time-of-day buttons in the card's top-right corner, over the press-anywhere
+                button: a sun, a sunset and a moon, the one this theme shows marked. A press
+                puts the theme on at that time. A scene with one look has none. */}
+            {(c.slots?.length ?? 0) > 1 && (
+              <Box key={`times-${c.slug}`} position="absolute" top={0} right={0} flexDirection="row" gap={0}>
+                {SLOTS.filter(s => c.slots!.includes(s)).map(s => (
+                  <Button
+                    key={`time-${c.slug}-${s}`}
+                    label={SLOT_ICON[s]}
+                    {...(slotOf(c, picked) === s ? { variant: 'primary' as const } : { dimColor: true })}
+                    onPress={() => void pickTime($, c.slug, s).catch(() => undefined)}
+                  />
+                ))}
+              </Box>
+            )}
           </Box>
         ))}
         <Box key="foot" flexDirection="row">

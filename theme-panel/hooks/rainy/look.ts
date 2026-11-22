@@ -50,3 +50,6 @@ export const RAINY_LOOK: ThemeSetArgs = {
 // The scene is one drawing that animates on its own: made once, drawn as often as asked.
 let svg: string | undefined
 export const rainySvg = (): string => (svg ??= sceneSvg())
+
+// By day: the light scheme, which the scene reads to draw the window in daylight, with the sun.
+export const RAINY_DAY_LOOK: ThemeSetArgs = { ...RAINY_LOOK, overrideColorScheme: 'light' }

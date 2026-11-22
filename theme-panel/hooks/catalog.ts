@@ -19,7 +19,8 @@ import { THEME as LOW_ORBIT } from './kit/low-orbit.js'
 import type { ThemeSetArgs } from 'claude-code'
 
 import type { Theme } from './kit/types'
-import { RAINY_ALT, RAINY_LOOK, RAINY_SCENE, rainySvg } from './rainy/look'
+import { RAINY_ALT, RAINY_DAY_LOOK, RAINY_LOOK, RAINY_SCENE, rainySvg } from './rainy/look'
+import { kitSlots, type Slot, SLOTS } from './slots'
 import { SUNFIELD_ALT, SUNFIELD_SCENE, sunfieldLookAt, sunfieldSvgAt } from './sunfield/look'
 
 /**
@@ -33,8 +34,12 @@ export type Entry = {
   look?: ThemeSetArgs
   svg?: () => string
   /** For a theme that follows the clock by itself (Sunfield): its look and scene at a moment. */
-  lookAt?: (ms: number) => ThemeSetArgs
-  svgAt?: (ms: number) => string
+  lookAt?: (ms: number, slot?: Slot) => ThemeSetArgs
+  svgAt?: (ms: number, slot?: Slot) => string
+  /** For a fixed-look theme with more than one time of day (Rainy Window): its look at each. */
+  lookFor?: (slot: Slot) => ThemeSetArgs
+  /** The times of day its card offers (a BackdropKit theme's are worked out from its moments). */
+  slots?: readonly Slot[]
   alt?: string
   /** Whether the backdrop needs the sandboxed frame (CSS animation) rather than an image. */
   isInteractive?: boolean
@@ -42,10 +47,18 @@ export type Entry = {
   thumb?: string
 }
 
-const kit = (theme: Theme): Entry => ({ slug: theme.slug, name: theme.name, kit: theme })
+const kit = (theme: Theme): Entry => ({ slug: theme.slug, name: theme.name, kit: theme, slots: kitSlots(theme) })
 
 export const CATALOG: readonly Entry[] = [
-  { slug: RAINY_SCENE, name: 'Rainy Window', look: RAINY_LOOK, svg: rainySvg, alt: RAINY_ALT },
+  {
+    slug: RAINY_SCENE,
+    name: 'Rainy Window',
+    look: RAINY_LOOK,
+    lookFor: slot => (slot === 'day' ? RAINY_DAY_LOOK : RAINY_LOOK),
+    slots: ['day', 'night'],
+    svg: rainySvg,
+    alt: RAINY_ALT,
+  },
   kit(CLOUD_SEA),
   kit(DEEP_REEF),
   kit(GAS_STATION),
@@ -54,7 +67,7 @@ export const CATALOG: readonly Entry[] = [
   kit(MIRROR_LAKE),
   kit(MOON_KEEP),
   kit(SIDE_STREET),
-  { slug: SUNFIELD_SCENE, name: 'Sunfield', lookAt: sunfieldLookAt, svgAt: sunfieldSvgAt, alt: SUNFIELD_ALT, isInteractive: true },
+  { slug: SUNFIELD_SCENE, name: 'Sunfield', lookAt: sunfieldLookAt, svgAt: sunfieldSvgAt, slots: SLOTS, alt: SUNFIELD_ALT, isInteractive: true },
   kit(HARBOR),
   kit(TIDE_LINE),
   kit(SUNBEAM_WOOD),

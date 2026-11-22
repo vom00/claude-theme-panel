@@ -116,6 +116,41 @@ test('blur kept off comes back off in a new session, and /theme-panel blur on tu
   expect(blurOf(sets.at(-1))).toBeGreaterThan(0)
 })
 
+test("a card's day, sunset and night buttons put that theme on at that time", async ($, on) => {
+  const sets = engine(on)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // Night is marked to start with.
+  expect((await ui.find({ key: 'time-cloud-sea-night' }))?.props.variant).toBe('primary')
+  await ui.press({ key: 'time-cloud-sea-day' })
+  expect(sets.at(-1)?.backdrop?.scene).toBe('cloud-sea')
+  expect(sets.at(-1)?.overrideColorScheme).toBe('light')
+  expect((await ui.find({ key: 'time-cloud-sea-day' }))?.props.variant).toBe('primary')
+  await ui.press({ key: 'time-cloud-sea-sunset' })
+  const tint = (l: ThemeSetArgs | undefined) => (l?.backdrop?.glass === false ? undefined : l?.backdrop?.glass?.tint)
+  const sunset = tint(sets.at(-1))
+  await ui.press({ key: 'time-cloud-sea-night' })
+  expect(tint(sets.at(-1))).not.toBe(sunset)
+  // Rainy Window has day and night; Deep Reef, one look, has no buttons.
+  await ui.press({ key: 'time-rainy-window-day' })
+  expect(sets.at(-1)?.overrideColorScheme).toBe('light')
+  expect(await ui.find({ key: 'time-rainy-window-sunset' })).toBeUndefined()
+  expect(await ui.find({ key: 'times-deep-reef' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a picked time comes back in a new session, and /theme-panel <name> <time> picks one', async ($, on) => {
+  const sets = engine(on, { current: 'harbor', times: { harbor: 'day' } })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  expect(sets.at(-1)?.backdrop?.scene).toBe('harbor')
+  expect(sets.at(-1)?.overrideColorScheme).toBe('light')
+  const r = await $.command.run({ command: 'theme-panel', args: 'sunfield day' } as Parameters<typeof $.command.run>[0])
+  expect(JSON.stringify(r)).toContain('Sunfield is on, at day')
+  expect(sets.at(-1)?.overrideColorScheme).toBe('light')
+  const r2 = await $.command.run({ command: 'theme-panel', args: 'moon keep day' } as Parameters<typeof $.command.run>[0])
+  expect(JSON.stringify(r2)).toContain('one look only')
+})
+
 test('on desktop the whole card takes the press, over the picture', async ($, on) => {
   const sets = engine(on)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
