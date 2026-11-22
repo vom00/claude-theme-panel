@@ -15,7 +15,7 @@ Then run `/reload-plugins` or start a new session.
 
 There are 16 themes: Rainy Window, Cloud Sea, Deep Reef, Gas Station, Hill Village, Lavender Slope, Mirror Lake, Moon Keep, Side Street, Sunfield, Harbor, Tide Line, Sunbeam Wood, Snowfall Ridge, Rainy Studio and Low Orbit. Each one starts on its night version and stays there at any hour until you pick another time of day on its card. The panel shows four cards at a time; use the arrows at the top to page through them. Your pick carries over to new sessions.
 
-In the desktop app there's a 🌄 button in the prompt footer, left of the model name. It opens and closes the panel without sending anything to the chat, so a reply that's running keeps going.
+In the desktop app there's a 👒 button in the prompt footer, left of the model name. It opens and closes the panel without sending anything to the chat, so a reply that's running keeps going.
 
 You can also use the command:
 
