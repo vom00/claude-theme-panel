@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Agent, Hud, Look } from '../types'
-import { EMPTY, groupCategories, HIDE_CHIP, normalize, renderHud, renderStrip, STRIP_H, STRIP_W } from './core'
+import { EMPTY, groupCategories, normalize, renderHud, renderStrip, STRIP_H, STRIP_W } from './core'
 import { cardOf, paletteOf } from './palette'
 import { MINI_H, MINI_W, PANEL_H, PANEL_W, renderMini, renderPanel } from './panel'
 import { PORTRAIT, PORTRAIT_H, PORTRAIT_W } from './portrait'
@@ -338,24 +338,25 @@ export const register: Register = on => {
     // (never name a local `h`: JSX compiles to the global h())
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
     const palette = paletteOf(await read($, look))
-    // A see-through button laid over part of a picture: a blank label wide enough to fill the
-    // box, cut to its edge, so a press anywhere on that part lands on it.
-    const hit = (key: string, w: number, onPress: () => void) => (
-      <Box key={`${key}-hit`} position="absolute" top={0} left={0} right={0} bottom={0} flexDirection="row" alignItems="stretch" overflow="hidden">
-        <Button key={key} plain onPress={onPress}>
-          <Text color="transparent">{BLANK.repeat(Math.ceil(w / 4) + 20)}</Text>
+    // A see-through button over one of the round buttons drawn in the picture, at its right edge:
+    // only as big as its own short blank label (a longer one is cut short with a visible "…"),
+    // with no hover highlight, since the app can only highlight a rectangle.
+    const roundHit = (key: string, label: string, onPress: () => void, isCentred: boolean) => (
+      <Box key={`${key}-hit`} position="absolute" top={0} right={0} bottom={isCentred ? 0 : undefined} flexDirection="row" alignItems="center">
+        <Button key={key} plain hover={{ backgroundColor: 'transparent', color: 'transparent' }} onPress={onPress}>
+          <Text color="transparent">{BLANK.repeat(3)}</Text>
         </Button>
       </Box>
     )
     const snap = await read($, view)
     if (await read($, isHidden)) {
-      // Minimized: one slim strip in the HUD's style, its readings and a SHOW chip; a press
-      // anywhere on it brings the HUD back.
+      // Minimized: one slim strip in the HUD's style, its rune, readings and a round maximize
+      // button at the right, which brings the HUD back.
       const sh = Math.round((HUD_W * STRIP_H) / STRIP_W)
       return (
         <Box flexDirection="column">
           <Svg source={renderStrip(normalize(snap.data), { palette })} alt="Cyberpunk HUD, minimized" width={HUD_W} height={sh} />
-          {hit('hud-restore', HUD_W, () => void setMinimized($, false))}
+          {roundHit('hud-restore', 'Show the Cyberpunk HUD', () => void setMinimized($, false), true)}
         </Box>
       )
     }
@@ -373,18 +374,11 @@ export const register: Register = on => {
     })
     // an interactive Svg draws in a frame: without a size it falls back to 300x150. The minimize button
     // is drawn in its top-right corner (a round button with a minus); a see-through button over it minimizes the HUD.
-    const scale = HUD_W / 1080
-    const hh = Math.round(236 * scale)
-    const chipW = Math.ceil((1080 - HIDE_CHIP.x + 4) * scale)
-    const chipH = Math.ceil((HIDE_CHIP.y + HIDE_CHIP.h + 4) * scale)
+    const hh = Math.round((236 * HUD_W) / 1080)
     return (
       <Box flexDirection="column">
         <Svg source={source} alt="Cyberpunk HUD: context, plan limits, cost and active agents" width={HUD_W} height={hh} isInteractive />
-        <Box key="corner" position="absolute" top={0} right={0} width={`${Math.ceil((100 * chipW) / HUD_W)}%`} height={`${Math.ceil((100 * chipH) / hh)}%`} flexDirection="row" alignItems="stretch" overflow="hidden">
-          <Button key="hud-minimize" plain onPress={() => void setMinimized($, true)}>
-            <Text color="transparent">{BLANK.repeat(Math.ceil(chipW / 4) + 20)}</Text>
-          </Button>
-        </Box>
+        {roundHit('hud-minimize', 'Minimize the Cyberpunk HUD', () => void setMinimized($, true), false)}
       </Box>
     )
   })
