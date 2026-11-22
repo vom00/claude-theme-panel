@@ -329,8 +329,21 @@ export function portraitBlock(x: number, y: number, w: number, h: number, art: P
   ].join('')
 }
 
-/** The HIDE chip at the HUD's top-right, in the HUD's 1080-wide units: where the rail stops for it. */
-export const HIDE_CHIP = { x: 966, y: 2, w: 96, h: 24 }
+/** The minimize button at the HUD's top-right, in the HUD's 1080-wide units: where the rail stops for it. */
+export const HIDE_CHIP = { x: 1030, y: 1, w: 26, h: 26 }
+
+/** A round minimize button: filled with the HUD's accent, a darker rim, a soft shine and a dark minus. */
+function minimizeButton(x: number, y: number, d: number): string {
+  const r = d / 2
+  const cx = x + r
+  const cy = y + r
+  return [
+    `<defs><radialGradient id="minShine" cx="50%" cy="30%" r="70%"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/></radialGradient></defs>`,
+    `<circle cx="${cx}" cy="${cy}" r="${r - 1}" fill="${C.amber}" stroke="${C.amberDim}" stroke-width="2"/>`,
+    `<circle cx="${cx}" cy="${cy}" r="${r - 2}" fill="url(#minShine)"/>`,
+    `<line x1="${cx - r * 0.45}" y1="${cy}" x2="${cx + r * 0.45}" y2="${cy}" stroke="${C.bg}" stroke-width="${(d * 0.13).toFixed(1)}" stroke-linecap="round" opacity="0.85"/>`,
+  ].join('')
+}
 
 /** A chip with a chevron and a word: the HUD's own buttons, drawn in its colours. */
 function chip(x: number, y: number, w: number, hgt: number, word: string, isUp: boolean): string {
@@ -405,7 +418,7 @@ export function renderHud(h: Hud, o: { now: number; phaseNow?: number; isWorking
     agentsSection(h, now),
     `<line x1="18" y1="198" x2="1062" y2="198" stroke="${C.amberDim}" stroke-width="1" stroke-dasharray="3 5" opacity="0.7"/>`,
     footer(h, now, isWorking, o.name),
-    o.hideChip ? chip(HIDE_CHIP.x, HIDE_CHIP.y, HIDE_CHIP.w, HIDE_CHIP.h, 'HIDE', false) : '',
+    o.hideChip ? minimizeButton(HIDE_CHIP.x, HIDE_CHIP.y, HIDE_CHIP.w) : '',
     `</svg>`,
   ].join('')
   return o.phaseNow === undefined ? svg : inPhase(svg, o.phaseNow)

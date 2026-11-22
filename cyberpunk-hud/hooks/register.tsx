@@ -369,8 +369,8 @@ export const register: Register = on => {
       palette,
       hideChip: true,
     })
-    // an interactive Svg draws in a frame: without a size it falls back to 300x150. The HIDE chip
-    // is drawn in its top-right corner; a see-through button over that corner minimizes it.
+    // an interactive Svg draws in a frame: without a size it falls back to 300x150. The minimize button
+    // is drawn in its top-right corner (a round button with a minus); a see-through button over it minimizes the HUD.
     const scale = HUD_W / 1080
     const hh = Math.round(236 * scale)
     const chipW = Math.ceil((1080 - HIDE_CHIP.x + 4) * scale)
