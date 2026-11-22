@@ -58,11 +58,11 @@ test('pressing a card puts that theme on, on every surface', async ($, on) => {
   }
 })
 
-test('the desktop panel counts thirteen themes and pages through them', async ($, on) => {
+test('the desktop panel counts sixteen themes and pages through them', async ($, on) => {
   engine(on)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  expect((await ui.find({ type: 'Text', text: /13 themes/ }))?.text).toBe('13 themes')
+  expect((await ui.find({ type: 'Text', text: /16 themes/ }))?.text).toBe('16 themes')
   expect((await ui.find({ type: 'Text', text: /Deep Reef/ }))?.text).toBe('Deep Reef')
   // Four cards to a page, so the ninth is two pages down.
   expect(await ui.find({ type: 'Text', text: /Side Street/ })).toBeUndefined()
@@ -97,7 +97,7 @@ test('on desktop the whole card takes the press, over the picture', async ($, on
 })
 
 test('every page of four stays small enough for the app to draw', () => {
-  expect(PAGES.map(p => p.length)).toEqual([4, 4, 4, 1])
+  expect(PAGES.map(p => p.length)).toEqual([4, 4, 4, 4])
   for (const p of PAGES) expect(p.reduce((n, c) => n + pictureSize(c), 0)).toBeLessThanOrEqual(PAGE_BUDGET)
 })
 
@@ -163,7 +163,7 @@ test('the footer button shows its sun-over-hills icon', async ($, on) => {
 test('every theme is on its night look, even at noon', async ($, on) => {
   const sets = engine(on)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
-  for (const slug of ['rainy-window', 'cloud-sea', 'deep-reef', 'gas-station', 'hill-village', 'lavender-slope', 'mirror-lake', 'moon-keep', 'side-street', 'sunfield', 'harbor', 'tide-line', 'sunbeam-wood']) {
+  for (const slug of ['rainy-window', 'cloud-sea', 'deep-reef', 'gas-station', 'hill-village', 'lavender-slope', 'mirror-lake', 'moon-keep', 'side-street', 'sunfield', 'harbor', 'tide-line', 'sunbeam-wood', 'snowfall-ridge', 'rainy-studio', 'low-orbit']) {
     await $.command.run({ command: 'theme-panel', args: slug } as Parameters<typeof $.command.run>[0])
     expect(sets.at(-1)?.backdrop?.scene).toBe(slug)
     expect(sets.at(-1)?.overrideColorScheme).toBe('dark')

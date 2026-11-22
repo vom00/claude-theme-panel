@@ -13,7 +13,7 @@ Then run `/reload-plugins` or start a new session.
 
 ## Theme panel
 
-There are 13 themes: Rainy Window, Cloud Sea, Deep Reef, Gas Station, Hill Village, Lavender Slope, Mirror Lake, Moon Keep, Side Street, Sunfield, Harbor, Tide Line and Sunbeam Wood. Each one stays on its night version at any hour. The panel shows four cards at a time; use the arrows at the top to page through them. Your pick carries over to new sessions.
+There are 16 themes: Rainy Window, Cloud Sea, Deep Reef, Gas Station, Hill Village, Lavender Slope, Mirror Lake, Moon Keep, Side Street, Sunfield, Harbor, Tide Line, Sunbeam Wood, Snowfall Ridge, Rainy Studio and Low Orbit. Each one stays on its night version at any hour. The panel shows four cards at a time; use the arrows at the top to page through them. Your pick carries over to new sessions.
 
 In the desktop app there's a 🌄 button in the prompt footer, left of the model name. It opens and closes the panel without sending anything to the chat, so a reply that's running keeps going.
 
@@ -30,4 +30,8 @@ A purple, scanlined readout above the prompt with a portrait, the theme card, th
 
 ## Credits
 
-Rainy Window's scene is from the rainy-window plugin by Ishu Agrawal (https://github.com/ishuagrawal/claude-code-themes), under the MIT licence in `theme-panel/hooks/rainy/LICENSE`. The other twelve scenes come from BackdropKit themes.
+The other fifteen scenes are from [BackdropKit](https://winchxyz.github.io/backdropkit/) by winchxyz, a free, MIT-licensed set of animated pixel-art themes ([source](https://github.com/winchxyz/backdropkit)). You can download and install each one on its own from that page.
+
+Rainy Window's scene is from the rainy-window plugin by Ishu Agrawal (https://github.com/ishuagrawal/claude-code-themes), under the MIT licence in `theme-panel/hooks/rainy/LICENSE`.
+
+The Flightdeck HUD's console above the prompt, with its portrait, gauges and plan limits, takes its idea from [Interlinked](https://github.com/codedcasanova/interlinked-theme) by codedcasanova, a retro-future noir theme for the Claude desktop app (MIT).

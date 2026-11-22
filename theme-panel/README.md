@@ -7,7 +7,7 @@ The cards come four to a page; the ▲ and ▼ arrows at the top turn the page.
 
 
 Themes: Rainy Window, Cloud Sea, Deep Reef, Gas Station, Hill Village, Lavender Slope, Mirror Lake,
-Moon Keep, Side Street, Sunfield, Harbor, Tide Line and Sunbeam Wood.
+Moon Keep, Side Street, Sunfield, Harbor, Tide Line, Sunbeam Wood, Snowfall Ridge, Rainy Studio and Low Orbit.
 The BackdropKit themes show their scenes as they ship, whole,
 and every theme stays on its night look whatever the time. Gas Station's
 price board still shows this chat's tokens, context and weekly limit.

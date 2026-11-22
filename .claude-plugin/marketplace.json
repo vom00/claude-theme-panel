@@ -6,7 +6,7 @@
     {
       "name": "theme-panel",
       "source": "./theme-panel",
-      "description": "Theme cards on the right: click one to switch theme. Every theme stays on its night look."
+      "description": "Theme cards on the right: click one to switch theme. 16 themes, each on its night look."
     },
     {
       "name": "flightdeck-hud",

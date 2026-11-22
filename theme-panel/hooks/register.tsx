@@ -1,6 +1,6 @@
 // Theme panel: a column of theme cards docked on the right of the chat, each a picture of the
 // theme's scene with its name under it. Pressing a name puts that theme on at once; the choice
-// is kept for new sessions. The panel carries every theme itself (twelve BackdropKit themes as
+// is kept for new sessions. The panel carries every theme itself (fifteen BackdropKit themes as
 // they ship, and Rainy Window), so one mod sets and draws whichever is on.
 //
 // The Flightdeck HUD hears each $.theme.set and colours itself from the scene's name, so the

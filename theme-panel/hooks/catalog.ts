@@ -13,6 +13,9 @@ import { THEME as SIDE_STREET } from './kit/side-street.js'
 import { THEME as HARBOR } from './kit/harbor.js'
 import { THEME as TIDE_LINE } from './kit/tide-line.js'
 import { THEME as SUNBEAM_WOOD } from './kit/sunbeam-wood.js'
+import { THEME as SNOWFALL_RIDGE } from './kit/snowfall-ridge.js'
+import { THEME as RAINY_STUDIO } from './kit/rainy-studio.js'
+import { THEME as LOW_ORBIT } from './kit/low-orbit.js'
 import type { ThemeSetArgs } from 'claude-code'
 
 import type { Theme } from './kit/types'
@@ -55,6 +58,9 @@ export const CATALOG: readonly Entry[] = [
   kit(HARBOR),
   kit(TIDE_LINE),
   kit(SUNBEAM_WOOD),
+  kit(SNOWFALL_RIDGE),
+  kit(RAINY_STUDIO),
+  kit(LOW_ORBIT),
 ]
 
 export const DEFAULT_SLUG = RAINY_SCENE
