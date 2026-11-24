@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Agent, Hud, Look } from '../types'
-import { EMPTY, groupCategories, normalize, renderHud, renderStrip, STRIP_H, STRIP_W } from './core'
+import { AGENT_LINGER_MS, EMPTY, groupCategories, normalize, renderHud, renderStrip, STRIP_H, STRIP_W, sweepAgents } from './core'
 import { cardOf, paletteOf } from './palette'
 import { MINI_H, MINI_W, PANEL_H, PANEL_W, renderMini, renderPanel } from './panel'
 import { PORTRAIT, PORTRAIT_H, PORTRAIT_W } from './portrait'
@@ -144,8 +144,13 @@ export const register: Register = on => {
     })
     lastSig = ''
     await flush($)
-    // the footer clock and uptime show minutes: one check a minute, a redraw only when the minute moved
-    $.clock.every(60_000, () => flush($))
+    // the footer clock and uptime show minutes: one check a minute, a redraw only when the minute moved.
+    // The same tick clears finished agents whose own timer was lost (a reload starts timers over).
+    $.clock.every(60_000, async () => {
+      const now = await $.clock.now()
+      await update($, hud, x => sweepAgents(normalize(x), now))
+      await flush($)
+    })
     const done = await next(e)
     void readBreakdown($)
     return done
@@ -304,7 +309,7 @@ export const register: Register = on => {
     await put($, s => {
       const known = s.agents.find(a => a.id === id)
       const agents = known
-        ? s.agents.map(a => (a.id === id ? { ...a, model: started.model, status: 'running' as const, endedAt: null } : a))
+        ? s.agents.map(a => (a.id === id ? { ...a, model: started.model, status: 'running' as const, endedAt: null, isGone: false } : a))
         : [...s.agents, agent]
       return { ...s, agents: agents.slice(-12), spawned: known ? s.spawned : s.spawned + 1 }
     })
@@ -318,6 +323,8 @@ export const register: Register = on => {
     if (sub) {
       const status = e.reason === 'answer' ? ('done' as const) : ('failed' as const)
       await put($, s => ({ ...s, agents: s.agents.map(a => (a.id === sub ? { ...a, status, endedAt: t } : a)) }))
+      // It stays in the list a little while, showing DONE or FAILED, then goes.
+      $.clock.after(AGENT_LINGER_MS, async () => put($, s => sweepAgents(s, t + AGENT_LINGER_MS)))
       return done
     }
     await update($, isWorking, () => false)

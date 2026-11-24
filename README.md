@@ -28,7 +28,7 @@ On Gas Station, the price board in the scene shows this chat's token count, cont
 
 ## Cyberpunk-HUD
 
-A purple, scanlined readout above the prompt with a portrait, the theme card, the context bar, the 5-hour and weekly limits with their reset times, the session cost and the active agents. It reads the scene name from each theme change, so it matches whichever theme the panel has on.
+A purple, scanlined readout above the prompt with a portrait, the theme card, the context bar, the 5-hour and weekly limits with their reset times, the session cost and the active agents. A finished agent stays in the list for 30 seconds, showing DONE or FAILED and how long it took, then drops off (it still counts toward the DONE and SPAWNED totals). It reads the scene name from each theme change, so it matches whichever theme the panel has on.
 
 Press the round minus button at the end of its top rail to shrink it to a slim strip with the HUD's rune, your context and plan limits; click anywhere on the strip (or its round maximize button) to bring the full HUD back. It stays minimized in new sessions until you bring it back (`/hud on` works too).
 

@@ -10,6 +10,8 @@ export type Agent = {
   startedAt: number
   endedAt: number | null
   tools: number
+  /** Gone from the Active Agents list: it finished a while ago (still counted as done). */
+  isGone?: boolean
 }
 
 export type Hud = {

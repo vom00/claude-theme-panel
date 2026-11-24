@@ -210,17 +210,29 @@ export const modelLabel = (id: string) => {
   return `${name.toUpperCase()}${ver ? ` ${ver}` : ''}`.trim()
 }
 
+/** How long a finished agent stays in the Active Agents list, showing DONE or FAILED, before it goes. */
+export const AGENT_LINGER_MS = 30_000
+
+/** Marks the agents that finished at least AGENT_LINGER_MS before `now` as gone from the list. */
+export function sweepAgents(h: Hud, now: number): Hud {
+  const isStale = (a: Agent) => a.status !== 'running' && !a.isGone && a.endedAt !== null && now - a.endedAt >= AGENT_LINGER_MS - 1000
+  if (!h.agents.some(isStale)) return h
+  return { ...h, agents: h.agents.map(a => (isStale(a) ? { ...a, isGone: true } : a)) }
+}
+
 export function agentsSection(h: Hud, now: number, x0 = 812, x1 = 1060): string {
   const out: string[] = []
   const running = h.agents.filter(a => a.status === 'running')
+  // The counts are the session's; the list shows the running ones and those just finished.
   const finished = h.agents.filter(a => a.status !== 'running')
+  const recent = finished.filter(a => !a.isGone)
   out.push(text(x0, 42, 'ACTIVE AGENTS', { weight: 700, ls: 1.4 }))
   out.push(text(x0, 55, `${running.length} RUNNING · ${finished.filter(a => a.status === 'done').length} DONE`, { size: 10, fill: C.muted, ls: 0.6 }))
   if (running.length > 0) {
     out.push(`<circle cx="${x1 - 4}" cy="38" r="4" fill="${C.cyan}"><animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite"/></circle>`)
   }
   out.push(`<line x1="${x0}" y1="66" x2="${x1}" y2="66" stroke="${C.amberDim}" stroke-dasharray="2 4" opacity="0.6"/>`)
-  const rows: Agent[] = [...running.slice(-4), ...finished.slice(-4).reverse()].slice(0, 4)
+  const rows: Agent[] = [...running.slice(-4), ...recent.slice(-4).reverse()].slice(0, 4)
   if (rows.length === 0) {
     out.push(text(x0, 104, 'NO AGENTS RUNNING', { size: 11, fill: C.muted }))
     out.push(text(x0, 120, 'SUBAGENTS SHOW UP HERE', { size: 10, fill: C.amberDim, ls: 0.5 }))
@@ -247,7 +259,8 @@ export function agentsSection(h: Hud, now: number, x0 = 812, x1 = 1060): string 
     }
   })
   out.push(`<line x1="${x0}" y1="176" x2="${x1}" y2="176" stroke="${C.amberDim}" stroke-width="1"/>`)
-  const more = h.agents.length > rows.length ? ` · +${h.agents.length - rows.length} MORE` : ''
+  const shown = running.length + recent.length
+  const more = shown > rows.length ? ` · +${shown - rows.length} MORE` : ''
   out.push(text(x0, 188, `THIS SESSION · ${h.spawned} SPAWNED${more}`, { size: 10.5, fill: C.amber, ls: 0.5 }))
   return out.join('')
 }
